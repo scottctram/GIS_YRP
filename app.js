@@ -148,40 +148,6 @@ fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Police
     .catch(err => console.error("Error loading Bio GeoJSON:", err));
 
 
-
-
-// Biodiversity Layer (Trees)
-const biodiversityLayer = L.markerClusterGroup();
-biodiversityLayer.currentData = { type: "FeatureCollection", features: [] };
-
-function createBioLayer(data) {
-    return L.geoJSON(data, {
-        pointToLayer: (feature, latlng) => {
-            const color = getColorFromText(feature.properties.COM_NAME);
-            const iconHtml = `<i class="fa-solid fa-tree" style="color: ${color}; font-size: 20px; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;"></i>`;
-            const treeIcon = L.divIcon({
-                className: 'tree-div-icon',
-                html: iconHtml,
-                iconSize: [24, 24],    
-                iconAnchor: [12, 22],  
-                popupAnchor: [0, -22]  
-            });
-            return L.marker(latlng, { icon: treeIcon });
-        },
-        onEachFeature: bindPopupWithBuffer
-    });
-}
-
-fetch('https://services.arcgis.com/ZpeBVw5o1kjit7LT/arcgis/rest/services/Street_Tree_Inventory/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson')
-    .then(response => response.json())
-    .then(data => {
-        biodiversityData = data;
-        biodiversityLayer.currentData = data;
-        biodiversityLayer.addLayer(createBioLayer(data));
-        map.addLayer(biodiversityLayer);
-    })
-    .catch(err => console.error("Error loading Bio GeoJSON:", err));
-
 // Water Bodies Layer
 const waterLayer = L.geoJSON(null, {
     style: { color: "#0077be", weight: 1, opacity: 1, fillOpacity: 0.5 },
