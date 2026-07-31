@@ -153,7 +153,13 @@ fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Police
 // ===================================================================================================================================================== //
 
 let crimeData = { type: "FeatureCollection", features: [] };
-const crimeLayer = L.markerClusterGroup();
+const crimeLayer = L.markerClusterGroup({
+    spiderfyOnMaxZoom: true,          // Forces markers to fan out at max zoom
+    showCoverageOnHover: false,       // Hides polygon coverage bounds
+    zoomToBoundsOnClick: true,        // Zooms into clusters when clicked
+    spiderfyDistanceMultiplier: 2.5,  // Increases the spread distance of spider legs
+    spiderLegPolylineOptions: { weight: 1.5, color: '#222', opacity: 0.7 }
+});
 crimeLayer.currentData = { type: "FeatureCollection", features: [] };
 
 // Helper function to pick crime marker colors based on incident severity/type
