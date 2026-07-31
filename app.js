@@ -148,6 +148,60 @@ fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Police
     .catch(err => console.error("Error loading Bio GeoJSON:", err));
 
 
+// ===================================================================================================================================================== //
+// CRIME OCCURRENCES LAYER (Marker Cluster + Custom Styling)                                                                                            //
+// ===================================================================================================================================================== //
+
+let crimeData = { type: "FeatureCollection", features: [] };
+const crimeLayer = L.markerClusterGroup();
+crimeLayer.currentData = { type: "FeatureCollection", features: [] };
+
+// Helper function to pick crime marker colors based on incident severity/type
+function getCrimeColor(type) {
+    if (!type) return "#3388ff";
+    const t = type.toString().toUpperCase();
+    if (t.includes("ROBBERY") || t.includes("ASSAULT") || t.includes("WEAPON")) return "#d9534f"; // Red (High Risk)
+    if (t.includes("AUTO THEFT") || t.includes("THEFT FROM VEHICLE")) return "#f0ad4e";          // Orange (Property)
+    if (t.includes("BREAK AND ENTER") || t.includes("MISCHIEF")) return "#5bc0de";               // Blue (Minor)
+    return "#3388ff";                                                                            // Default Blue
+}
+
+function createCrimeLayer(data) {
+    return L.geoJSON(data, {
+        pointToLayer: (feature, latlng) => {
+            // Adjust property name ('offence' / 'UCR_EXT_C') depending on YRP's precise field header
+            const crimeType = feature.properties.offence || feature.properties.CATEGORY || "Incident";
+            const color = getCrimeColor(crimeType);
+
+            const iconHtml = `<i class="fa-solid fa-shield-halved" style="color: ${color}; font-size: 18px; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;"></i>`;
+            const crimeIcon = L.divIcon({
+                className: 'crime-div-icon',
+                html: iconHtml,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12],
+                popupAnchor: [0, -12]
+            });
+            return L.marker(latlng, { icon: crimeIcon });
+        },
+        onEachFeature: bindPopupWithBuffer
+    });
+}
+
+fetch('yk_crime_rpt22.json')
+    .then(response => {
+        if (!response.ok) throw new Error("HTTP error " + response.status);
+        return response.json();
+    })
+    .then(data => {
+        crimeData = data;
+        crimeLayer.currentData = data;
+        crimeLayer.addLayer(createCrimeLayer(data));
+        map.addLayer(crimeLayer);
+    })
+    .catch(err => console.error("Error loading Crime GeoJSON:", err));
+
+
+
 // Water Bodies Layer
 const waterLayer = L.geoJSON(null, {
     style: { color: "#0077be", weight: 1, opacity: 1, fillOpacity: 0.5 },
