@@ -6,7 +6,7 @@
 
 // Initial Zoom & Initial Centre kept as variables to be utilized by Home Button
 const initialZoom = 13;
-const initialCenter = [43.48, -80.54]; 
+const initialCenter = [43.99, -79.83]; 
 const map = L.map('map', { zoomControl: true }).setView(initialCenter, initialZoom);
 
 // ===================================================================================================================================================== //
@@ -113,6 +113,41 @@ const pointsLayer = L.geoJSON(pointsData, {
     },
     onEachFeature: bindPopupWithBuffer
 }).addTo(map);
+
+
+// Biodiversity Layer (Trees)
+const biodiversityLayer = L.markerClusterGroup();
+biodiversityLayer.currentData = { type: "FeatureCollection", features: [] };
+
+function createBioLayer(data) {
+    return L.geoJSON(data, {
+        pointToLayer: (feature, latlng) => {
+            const color = getColorFromText(feature.properties.COM_NAME);
+            const iconHtml = `<i class="fa-solid fa-tree" style="color: ${color}; font-size: 20px; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;"></i>`;
+            const treeIcon = L.divIcon({
+                className: 'tree-div-icon',
+                html: iconHtml,
+                iconSize: [24, 24],    
+                iconAnchor: [12, 22],  
+                popupAnchor: [0, -22]  
+            });
+            return L.marker(latlng, { icon: treeIcon });
+        },
+        onEachFeature: bindPopupWithBuffer
+    });
+}
+
+fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/PoliceStation/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson')
+    .then(response => response.json())
+    .then(data => {
+        biodiversityData = data;
+        biodiversityLayer.currentData = data;
+        biodiversityLayer.addLayer(createBioLayer(data));
+        map.addLayer(biodiversityLayer);
+    })
+    .catch(err => console.error("Error loading Bio GeoJSON:", err));
+
+
 
 
 // Biodiversity Layer (Trees)
