@@ -1,3 +1,5 @@
+// APP JavaScript File - York Region Environmental & Planning Web Map
+
 // ===================================================================================================================================================== //
 // MAP INITIALIZATION                                                                                                                                    //
 // ===================================================================================================================================================== //
@@ -7,18 +9,19 @@ const initialZoom = 10;
 const initialCenter = [44.00, -79.45]; 
 const map = L.map('map', { zoomControl: true }).setView(initialCenter, initialZoom);
 
-// Zoom threshold below which heavy layers (Roads, Addresses, Parcels, Police) will clear
+// Zoom threshold below which heavy layers (Roads, Addresses, Parcels) will clear
 const MIN_ZOOM_LEVEL = 15; 
 
 // ===================================================================================================================================================== //
 // GLOBAL VARIABLES                                                                                                                                      //
 // ===================================================================================================================================================== //
 let yorkData = { type: "FeatureCollection", features: [] };
+let policeData = { type: "FeatureCollection", features: [] };
+let crimeData = { type: "FeatureCollection", features: [] };
+
 let roadsData = { type: "FeatureCollection", features: [] };
 let addressesData = { type: "FeatureCollection", features: [] };
 let parcelsData = { type: "FeatureCollection", features: [] };
-let policeData = { type: "FeatureCollection", features: [] };
-let crimeData = { type: "FeatureCollection", features: [] };
 
 let bufferResultsData = { type: "FeatureCollection", features: [] };
 let filteredQueryData = null; 
@@ -51,10 +54,10 @@ function bindPopupWithBuffer(feature, layer) {
 }
 
 // ===================================================================================================================================================== //
-// STATIC LAYERS (YORK BOUNDARY & CRIME)                                                                                                                  //
+// STATIC LAYERS (YORK BOUNDARY, POLICE STATIONS & CRIME)                                                                                               //
 // ===================================================================================================================================================== //
 
-// 1. Boundaries Layer (York Region Boundary - Kept Static as it's low feature count)
+// 1. Boundaries Layer (York Region Boundary - Low feature count)
 const yorkLayer = L.geoJSON(null, {
     style: { color: "#800020", weight: 2.5, opacity: 1, fillOpacity: 0.05 },
     onEachFeature: bindPopupWithBuffer
@@ -69,7 +72,38 @@ fetch('https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Boundary/MapServer/
     })
     .catch(err => console.error("Error loading York Boundaries GeoJSON:", err));
 
-// 2. Crime Occurrences Layer (Local JSON - Static)
+// 2. Police Stations Layer (Static Load - Always visible across all zoom levels)
+const policeLayer = L.markerClusterGroup();
+policeLayer.currentData = { type: "FeatureCollection", features: [] };
+
+function createPoliceLayer(data) {
+    return L.geoJSON(data, {
+        pointToLayer: (feature, latlng) => {
+            const iconHtml = `<i class="fa-solid fa-building-shield" style="color: #003399; font-size: 20px; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;"></i>`;
+            const policeIcon = L.divIcon({
+                className: 'police-div-icon',
+                html: iconHtml,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12],
+                popupAnchor: [0, -12]
+            });
+            return L.marker(latlng, { icon: policeIcon });
+        },
+        onEachFeature: bindPopupWithBuffer
+    });
+}
+
+fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/PoliceStation/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson')
+    .then(response => response.json())
+    .then(data => {
+        policeData = data;
+        policeLayer.currentData = data;
+        policeLayer.addLayer(createPoliceLayer(data));
+        map.addLayer(policeLayer);
+    })
+    .catch(err => console.error("Error loading Police Stations GeoJSON:", err));
+
+// 3. Crime Occurrences Layer (Local JSON - Static)
 const crimeLayer = L.markerClusterGroup({
     spiderfyOnMaxZoom: true,
     showCoverageOnHover: false,
@@ -117,7 +151,7 @@ fetch('yk_crime_rpt22.json')
     .catch(err => console.error("Error loading Crime GeoJSON:", err));
 
 // ===================================================================================================================================================== //
-// DYNAMIC VIEWPORT (BBOX) LAYERS                                                                                                                        //
+// DYNAMIC VIEWPORT (BBOX) LAYERS (ROADS, ADDRESSES, PARCELS)                                                                                           //
 // ===================================================================================================================================================== //
 
 // Roads Layer
@@ -139,26 +173,6 @@ const parcelsLayer = L.geoJSON(null, {
     onEachFeature: bindPopupWithBuffer
 }).addTo(map);
 
-// Police Stations Layer
-const policeLayer = L.markerClusterGroup().addTo(map);
-
-function createPoliceLayer(data) {
-    return L.geoJSON(data, {
-        pointToLayer: (feature, latlng) => {
-            const iconHtml = `<i class="fa-solid fa-building-shield" style="color: #003399; font-size: 20px; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;"></i>`;
-            const policeIcon = L.divIcon({
-                className: 'police-div-icon',
-                html: iconHtml,
-                iconSize: [24, 24],
-                iconAnchor: [12, 12],
-                popupAnchor: [0, -12]
-            });
-            return L.marker(latlng, { icon: policeIcon });
-        },
-        onEachFeature: bindPopupWithBuffer
-    });
-}
-
 // Function to fetch BBOX features dynamically when zoomed in
 function fetchViewportData() {
     const currentZoom = map.getZoom();
@@ -168,11 +182,9 @@ function fetchViewportData() {
         roadsLayer.clearLayers();
         addressesLayer.clearLayers();
         parcelsLayer.clearLayers();
-        policeLayer.clearLayers();
         roadsData = { type: "FeatureCollection", features: [] };
         addressesData = { type: "FeatureCollection", features: [] };
         parcelsData = { type: "FeatureCollection", features: [] };
-        policeData = { type: "FeatureCollection", features: [] };
         return;
     }
 
@@ -212,16 +224,6 @@ function fetchViewportData() {
             parcelsLayer.addData(data);
         })
         .catch(err => console.error("Error fetching BBOX Parcels:", err));
-
-    // 4. Fetch Police Stations inside Viewport
-    fetch(`https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/PoliceStation/FeatureServer/0/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
-        .then(res => res.json())
-        .then(data => {
-            policeData = data;
-            policeLayer.clearLayers();
-            policeLayer.addLayer(createPoliceLayer(data));
-        })
-        .catch(err => console.error("Error fetching BBOX Police Stations:", err));
 }
 
 // Trigger query every time user finishes zooming or panning
@@ -467,6 +469,9 @@ function runQuery() {
 function resetQuery() {
     filteredQueryData = null;
     document.getElementById('query-status').innerText = "Reset done.";
+    policeLayer.clearLayers(); policeLayer.addLayer(createPoliceLayer(policeData));
+    crimeLayer.clearLayers(); crimeLayer.addLayer(createCrimeLayer(crimeData));
+    yorkLayer.clearLayers(); yorkLayer.addData(yorkData);
     fetchViewportData();
     if (document.getElementById('attributeTable').style.display === 'flex') switchTableLayer();
 }
@@ -482,11 +487,11 @@ function goHome() { map.setView(initialCenter, initialZoom); }
 const baseMaps = { "OpenStreetMap": osmLayer, "Satellite": satelliteLayer, "Dark": darkLayer };
 const overlayMaps = { 
     "York Boundaries": yorkLayer, 
+    "Police Stations": policeLayer,
+    "Crime Occurrences": crimeLayer,
     "Roads (Zoomed)": roadsLayer,
     "Addresses (Zoomed)": addressesLayer,
-    "Parcels (Zoomed)": parcelsLayer,
-    "Police Stations (Zoomed)": policeLayer,
-    "Crime Occurrences": crimeLayer
+    "Parcels (Zoomed)": parcelsLayer
 };
 
 L.control.scale().addTo(map);
@@ -519,12 +524,13 @@ legend.onAdd = function () {
     div.innerHTML = `
         <h4>Legend</h4>
         <i style="background: rgba(128, 0, 32, 0.2); border: 2px solid #800020;"></i> York Boundary<br>
-        <i style="background: #555"></i> Roads (Zoom 15+)<br>
-        <i style="background: #3388ff; border-radius: 50%;"></i> Addresses (Zoom 15+)<br>
-        <i style="background: rgba(34, 139, 34, 0.2); border: 1px solid #228b22;"></i> Parcels (Zoom 15+)<br>
         <i class="fa-solid fa-building-shield" style="color: #003399; font-size: 14px;"></i> Police Stations<br>
         <i class="fa-solid fa-shield-halved" style="color: #d9534f; font-size: 14px;"></i> High-Risk Incident<br>
-        <i class="fa-solid fa-shield-halved" style="color: #f0ad4e; font-size: 14px;"></i> Property Incident
+        <i class="fa-solid fa-shield-halved" style="color: #f0ad4e; font-size: 14px;"></i> Property Incident<br>
+        <hr style="margin: 5px 0;">
+        <i style="background: #555"></i> Roads (Zoom 15+)<br>
+        <i style="background: #3388ff; border-radius: 50%;"></i> Addresses (Zoom 15+)<br>
+        <i style="background: rgba(34, 139, 34, 0.2); border: 1px solid #228b22;"></i> Parcels (Zoom 15+)
     `;
     return div;
 };
