@@ -82,15 +82,25 @@ const policeLayer = L.layerGroup().addTo(map);
 function createPoliceLayer(data) {
     return L.geoJSON(data, {
         pointToLayer: (feature, latlng) => {
-            const iconHtml = `<div style="display:flex; align-items:center; justify-content:center; width:28px; height:28px; background:#ffffff; border:2px solid #003399; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.4);">
-                <i class="fa-solid fa-building-shield" style="color: #003399; font-size: 15px;"></i>
+            const iconHtml = `<div style="
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                width: 32px; 
+                height: 32px; 
+                background: #003399; 
+                border: 2px solid #ffffff; 
+                border-radius: 50%; 
+                box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+                color: #ffffff;">
+                <i class="fa-solid fa-shield-halved" style="font-size: 16px; line-height: 1;"></i>
             </div>`;
             const policeIcon = L.divIcon({
                 className: 'police-div-icon',
                 html: iconHtml,
-                iconSize: [28, 28],
-                iconAnchor: [14, 14],
-                popupAnchor: [0, -14]
+                iconSize: [32, 32],
+                iconAnchor: [16, 16],
+                popupAnchor: [0, -16]
             });
             return L.marker(latlng, { icon: policeIcon });
         },
@@ -758,12 +768,18 @@ function updateLegend() {
             </div>`;
     }
 
-    if (map.hasLayer(policeLayer)) {
-        itemsHtml += `
-            <div class="legend-row">
-                <i class="legend-symbol fa-solid fa-building-shield" style="color: #003399; font-size: 15px;"></i> Police Stations
-            </div>`;
-    }
+if (map.hasLayer(policeLayer)) {
+    itemsHtml += `
+        <div class="legend-row">
+            <i class="legend-symbol" style="
+                background: #003399; 
+                border: 1px solid #fff; 
+                border-radius: 50%; 
+                width: 14px; 
+                height: 14px; 
+                box-shadow: 0 0 2px rgba(0,0,0,0.4);"></i> YRP Police Station
+        </div>`;
+}
 
     if (map.hasLayer(crimeLayer)) {
         itemsHtml += `
