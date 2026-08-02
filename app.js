@@ -72,14 +72,14 @@ fetch('https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Boundary/MapServer/
     })
     .catch(err => console.error("Error loading York Boundaries GeoJSON:", err));
 
-// 2. Police Stations Layer (Standard Layer Group - NO CLUSTERING)
+// 2. Police Stations Layer
 const policeLayer = L.layerGroup().addTo(map);
 
 function createPoliceLayer(data) {
     return L.geoJSON(data, {
         pointToLayer: (feature, latlng) => {
-            const iconHtml = `<div style="display:flex; align-items:center; justify-content:center; width:28px; height:28px; background:#ffffff; border:2px solid #003399; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.4);">
-                <i class="fa-solid fa-building-shield" style="color: #003399; font-size: 15px;"></i>
+            const iconHtml = `<div style="display:flex; align-items:center; justify-content:center; width:26px; height:28px; background:#ffffff; border:2px solid #003399; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.4);">
+                <i class="fa-solid fa-building-shield" style="color: #003399; font-size: 14px;"></i>
             </div>`;
             const policeIcon = L.divIcon({
                 className: 'police-div-icon',
@@ -103,7 +103,7 @@ fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Police
     })
     .catch(err => console.error("Error loading Police Stations GeoJSON:", err));
 
-// 3. Crime Occurrences Layer (Standard Layer Group - NO CLUSTERING for direct points)
+// 3. Crime Occurrences Layer (HARDENED POINT PARSER)
 const crimeLayer = L.layerGroup().addTo(map);
 
 function getCrimeColor(type) {
@@ -116,22 +116,45 @@ function getCrimeColor(type) {
 }
 
 function createCrimeLayer(data) {
-    return L.geoJSON(data, {
-        pointToLayer: (feature, latlng) => {
+    const layerGroup = L.layerGroup();
+    if (!data || !data.features) return layerGroup;
+
+    data.features.forEach(feature => {
+        let lat, lng;
+
+        // Try extracting geometry coordinates first
+        if (feature.geometry && feature.geometry.coordinates) {
+            lng = parseFloat(feature.geometry.coordinates[0]);
+            lat = parseFloat(feature.geometry.coordinates[1]);
+        }
+        
+        // Fallback to explicit X/Y property keys from GeoJSON
+        if ((isNaN(lat) || isNaN(lng)) && feature.properties) {
+            lng = parseFloat(feature.properties.X);
+            lat = parseFloat(feature.properties.Y);
+        }
+
+        // Only create marker if valid latitude & longitude are resolved
+        if (!isNaN(lat) && !isNaN(lng)) {
             const crimeType = feature.properties.cr_ucr_tra || feature.properties.CATEGORY || "Incident";
             const color = getCrimeColor(crimeType);
-            const iconHtml = `<i class="fa-solid fa-shield-halved" style="color: ${color}; font-size: 18px; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;"></i>`;
-            const crimeIcon = L.divIcon({
-                className: 'crime-div-icon',
-                html: iconHtml,
-                iconSize: [24, 24],
-                iconAnchor: [12, 12],
-                popupAnchor: [0, -12]
+
+            // Simple Circle Marker as robust fallback rendering
+            const marker = L.circleMarker([lat, lng], {
+                radius: 6,
+                fillColor: color,
+                color: "#000000",
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.85
             });
-            return L.marker(latlng, { icon: crimeIcon });
-        },
-        onEachFeature: bindPopupWithBuffer
+
+            bindPopupWithBuffer(feature, marker);
+            layerGroup.addLayer(marker);
+        }
     });
+
+    return layerGroup;
 }
 
 fetch('yk_crime_rpt22.json')
@@ -166,7 +189,6 @@ const parcelsLayer = L.geoJSON(null, {
     onEachFeature: bindPopupWithBuffer
 });
 
-// Function to fetch BBOX features dynamically when zoomed in and layer is active
 function fetchViewportData() {
     const currentZoom = map.getZoom();
 
@@ -182,7 +204,6 @@ function fetchViewportData() {
 
     const bbox = map.getBounds().toBBoxString();
 
-    // 1. Fetch Roads inside Viewport (only if layer is active)
     if (map.hasLayer(roadsLayer)) {
         fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Transportation/MapServer/1/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
             .then(res => res.json())
@@ -194,7 +215,6 @@ function fetchViewportData() {
             .catch(err => console.error("Error fetching BBOX Roads:", err));
     }
 
-    // 2. Fetch Addresses inside Viewport (only if layer is active)
     if (map.hasLayer(addressesLayer)) {
         fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Location/MapServer/0/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
             .then(res => res.json())
@@ -210,7 +230,6 @@ function fetchViewportData() {
             .catch(err => console.error("Error fetching BBOX Addresses:", err));
     }
 
-    // 3. Fetch Parcels inside Viewport (only if layer is active)
     if (map.hasLayer(parcelsLayer)) {
         fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Planning/FeatureServer/0/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
             .then(res => res.json())
@@ -223,10 +242,8 @@ function fetchViewportData() {
     }
 }
 
-// Trigger query on pan/zoom
 map.on('moveend', fetchViewportData);
 
-// Fetch data immediately when a user toggles an overlay on
 map.on('overlayadd', function(e) {
     if (e.layer === roadsLayer || e.layer === addressesLayer || e.layer === parcelsLayer) {
         fetchViewportData();
@@ -252,7 +269,6 @@ function initiateBuffer(feature) {
     
     map.fitBounds(bufferVis.getBounds());
 
-    // Schema mapping targets
     const sources = [
         { name: "York Boundary", list: yorkData.features, aliasKey: "NAME", locKey: "MUNICIPALITY" },
         { name: "Roads", list: roadsData.features, aliasKey: "STREET_NAME", locKey: "FULL_CIVIC_ADDR" },
@@ -558,10 +574,10 @@ legend.onAdd = function () {
             <i class="legend-symbol fa-solid fa-building-shield" style="color: #003399; font-size: 15px;"></i> Police Stations
         </div>
         <div class="legend-row">
-            <i class="legend-symbol fa-solid fa-shield-halved" style="color: #d9534f; font-size: 15px;"></i> High-Risk Incident
+            <i class="legend-symbol" style="background: #d9534f; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> High-Risk Incident
         </div>
         <div class="legend-row">
-            <i class="legend-symbol fa-solid fa-shield-halved" style="color: #f0ad4e; font-size: 15px;"></i> Property Incident
+            <i class="legend-symbol" style="background: #f0ad4e; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> Property Incident
         </div>
         <hr style="margin: 6px 0;">
         <div class="legend-row">
