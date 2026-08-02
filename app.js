@@ -185,39 +185,45 @@ function fetchViewportData() {
 
     const bbox = map.getBounds().toBBoxString();
 
-    // 1. Fetch Roads inside Viewport
-    fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Transportation/MapServer/1/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
-        .then(res => res.json())
-        .then(data => {
-            roadsData = data;
-            roadsLayer.clearLayers();
-            roadsLayer.addData(data);
-        })
-        .catch(err => console.error("Error fetching BBOX Roads:", err));
+    // 1. Fetch Roads inside Viewport (only if layer is turned ON)
+    if (map.hasLayer(roadsLayer)) {
+        fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Transportation/MapServer/1/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
+            .then(res => res.json())
+            .then(data => {
+                roadsData = data;
+                roadsLayer.clearLayers();
+                roadsLayer.addData(data);
+            })
+            .catch(err => console.error("Error fetching BBOX Roads:", err));
+    }
 
-    // 2. Fetch Addresses inside Viewport
-    fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Location/MapServer/0/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
-        .then(res => res.json())
-        .then(data => {
-            addressesData = data;
-            addressesLayer.clearLayers();
-            const geoJsonData = L.geoJSON(data, {
-                pointToLayer: (feature, latlng) => L.circleMarker(latlng, { radius: 5, fillColor: "#3388ff", color: "#000", weight: 0.5, opacity: 1, fillOpacity: 0.8 }),
-                onEachFeature: bindPopupWithBuffer
-            });
-            addressesLayer.addLayer(geoJsonData);
-        })
-        .catch(err => console.error("Error fetching BBOX Addresses:", err));
+    // 2. Fetch Addresses inside Viewport (only if layer is turned ON)
+    if (map.hasLayer(addressesLayer)) {
+        fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Location/MapServer/0/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
+            .then(res => res.json())
+            .then(data => {
+                addressesData = data;
+                addressesLayer.clearLayers();
+                const geoJsonData = L.geoJSON(data, {
+                    pointToLayer: (feature, latlng) => L.circleMarker(latlng, { radius: 5, fillColor: "#3388ff", color: "#000", weight: 0.5, opacity: 1, fillOpacity: 0.8 }),
+                    onEachFeature: bindPopupWithBuffer
+                });
+                addressesLayer.addLayer(geoJsonData);
+            })
+            .catch(err => console.error("Error fetching BBOX Addresses:", err));
+    }
 
-    // 3. Fetch Parcels inside Viewport
-    fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Planning/FeatureServer/0/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
-        .then(res => res.json())
-        .then(data => {
-            parcelsData = data;
-            parcelsLayer.clearLayers();
-            parcelsLayer.addData(data);
-        })
-        .catch(err => console.error("Error fetching BBOX Parcels:", err));
+    // 3. Fetch Parcels inside Viewport (only if layer is turned ON)
+    if (map.hasLayer(parcelsLayer)) {
+        fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Planning/FeatureServer/0/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
+            .then(res => res.json())
+            .then(data => {
+                parcelsData = data;
+                parcelsLayer.clearLayers();
+                parcelsLayer.addData(data);
+            })
+            .catch(err => console.error("Error fetching BBOX Parcels:", err));
+    }
 }
 
 // Trigger query every time user finishes zooming or panning
