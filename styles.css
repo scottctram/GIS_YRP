@@ -37,29 +37,34 @@ body {
     background: white;
     background: rgba(255, 255, 255, 0.95);
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-    border-radius: 5px;
-    padding: 10px 12px;
-    line-height: 20px;
-    color: #444;
-    min-width: 140px;
+    border-radius: 6px;
+    padding: 10px 14px;
+    color: #333;
+    min-width: 160px;
     font-size: 13px;
+    line-height: 1.4;
 }
 .legend h4 {
-    margin: 0 0 6px;
-    color: #222;
+    margin: 0 0 8px 0;
+    color: #111;
     font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 4px;
 }
-.legend i {
+.legend-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+.legend-symbol {
+    display: inline-block;
     width: 18px;
     height: 18px;
-    color: #333;
-    float: left;
     margin-right: 8px;
-    opacity: 0.85;
     text-align: center;
-    line-height: 18px;
+    flex-shrink: 0;
 }
 
 /* --- Custom Navigation Controls --- */
