@@ -4,12 +4,10 @@
 // MAP INITIALIZATION                                                                                                                                    //
 // ===================================================================================================================================================== //
 
-// Initial Zoom & Center set to focus on York Region, Ontario
 const initialZoom = 10;
 const initialCenter = [44.00, -79.45]; 
 const map = L.map('map', { zoomControl: true }).setView(initialCenter, initialZoom);
 
-// Zoom threshold below which heavy layers (Roads, Addresses, Parcels) will clear
 const MIN_ZOOM_LEVEL = 15; 
 
 // ===================================================================================================================================================== //
@@ -57,7 +55,7 @@ function bindPopupWithBuffer(feature, layer) {
 // STATIC LAYERS (YORK BOUNDARY, POLICE STATIONS & CRIME)                                                                                               //
 // ===================================================================================================================================================== //
 
-// 1. Boundaries Layer (York Region Boundary)
+// 1. Boundaries Layer
 const yorkLayer = L.geoJSON(null, {
     style: { color: "#800020", weight: 2.5, opacity: 1, fillOpacity: 0.05 },
     onEachFeature: bindPopupWithBuffer
@@ -73,7 +71,7 @@ fetch('https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Boundary/MapServer/
     })
     .catch(err => console.error("Error loading York Boundaries GeoJSON:", err));
 
-// 2. Police Stations Layer (Standard Layer Group - NO CLUSTERING)
+// 2. Police Stations Layer
 const policeLayer = L.layerGroup().addTo(map);
 
 function createPoliceLayer(data) {
@@ -105,7 +103,7 @@ fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Police
     })
     .catch(err => console.error("Error loading Police Stations GeoJSON:", err));
 
-// 3. Crime Occurrences Layer (Hardened Point Parser - NO CLUSTERING)
+// 3. Crime Occurrences Layer
 const crimeLayer = L.layerGroup().addTo(map);
 
 function getCrimeColor(type) {
@@ -113,7 +111,7 @@ function getCrimeColor(type) {
     const t = type.toString().toUpperCase();
     if (t.includes("ROBBERY") || t.includes("ASSAULT") || t.includes("WEAPON")) return "#d9534f"; 
     if (t.includes("AUTO THEFT") || t.includes("THEFT")) return "#f0ad4e";          
-    if (t.includes("BREAK AND ENTER") || t.includes("MISCHIEF")) return "#5bc0de";               
+    if (t.includes("BREAK AND ENTER") || t.includes("MISCHIEF") || t.includes("B & E")) return "#5bc0de";               
     return "#3388ff";                                                                            
 }
 
@@ -124,19 +122,16 @@ function createCrimeLayer(data) {
     data.features.forEach(feature => {
         let lat, lng;
 
-        // Try extracting geometry coordinates first
         if (feature.geometry && feature.geometry.coordinates) {
             lng = parseFloat(feature.geometry.coordinates[0]);
             lat = parseFloat(feature.geometry.coordinates[1]);
         }
         
-        // Fallback to explicit X/Y property keys from GeoJSON
         if ((isNaN(lat) || isNaN(lng)) && feature.properties) {
             lng = parseFloat(feature.properties.X);
             lat = parseFloat(feature.properties.Y);
         }
 
-        // Only create marker if valid latitude & longitude are resolved
         if (!isNaN(lat) && !isNaN(lng)) {
             const crimeType = feature.properties.cr_ucr_tra || feature.properties.CATEGORY || "Incident";
             const color = getCrimeColor(crimeType);
@@ -164,6 +159,7 @@ fetch('yk_crime_rpt22.json')
         crimeData = data;
         crimeLayer.clearLayers();
         crimeLayer.addLayer(createCrimeLayer(data));
+        populateCrimeTypeDropdown(data);
         updateLegend();
     })
     .catch(err => console.error("Error loading Crime GeoJSON:", err));
@@ -172,24 +168,9 @@ fetch('yk_crime_rpt22.json')
 // DYNAMIC VIEWPORT (BBOX) LAYERS (ROADS, ADDRESSES, PARCELS) - OFF BY DEFAULT                                                                           //
 // ===================================================================================================================================================== //
 
-// Roads Layer (OFF by default)
-const roadsLayer = L.geoJSON(null, {
-    style: { color: "#555555", weight: 2, opacity: 0.8 },
-    onEachFeature: bindPopupWithBuffer
-});
-
-// Addresses Layer (OFF by default)
-const addressesLayer = L.markerClusterGroup({
-    spiderfyOnMaxZoom: true,
-    showCoverageOnHover: false,
-    zoomToBoundsOnClick: true
-});
-
-// Parcels Layer (OFF by default)
-const parcelsLayer = L.geoJSON(null, {
-    style: { color: "#228b22", weight: 1, opacity: 0.8, fillOpacity: 0.2 },
-    onEachFeature: bindPopupWithBuffer
-});
+const roadsLayer = L.geoJSON(null, { style: { color: "#555555", weight: 2, opacity: 0.8 }, onEachFeature: bindPopupWithBuffer });
+const addressesLayer = L.markerClusterGroup({ spiderfyOnMaxZoom: true, showCoverageOnHover: false, zoomToBoundsOnClick: true });
+const parcelsLayer = L.geoJSON(null, { style: { color: "#228b22", weight: 1, opacity: 0.8, fillOpacity: 0.2 }, onEachFeature: bindPopupWithBuffer });
 
 function fetchViewportData() {
     const currentZoom = map.getZoom();
@@ -209,11 +190,7 @@ function fetchViewportData() {
     if (map.hasLayer(roadsLayer)) {
         fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Transportation/MapServer/1/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
             .then(res => res.json())
-            .then(data => {
-                roadsData = data;
-                roadsLayer.clearLayers();
-                roadsLayer.addData(data);
-            })
+            .then(data => { roadsData = data; roadsLayer.clearLayers(); roadsLayer.addData(data); })
             .catch(err => console.error("Error fetching BBOX Roads:", err));
     }
 
@@ -235,24 +212,87 @@ function fetchViewportData() {
     if (map.hasLayer(parcelsLayer)) {
         fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Planning/FeatureServer/0/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
             .then(res => res.json())
-            .then(data => {
-                parcelsData = data;
-                parcelsLayer.clearLayers();
-                parcelsLayer.addData(data);
-            })
+            .then(data => { parcelsData = data; parcelsLayer.clearLayers(); parcelsLayer.addData(data); })
             .catch(err => console.error("Error fetching BBOX Parcels:", err));
     }
 }
 
 map.on('moveend', fetchViewportData);
 
-// Listen to overlay add/remove events to dynamically update the map data & legend
 map.on('overlayadd overlayremove', function(e) {
     if (e.layer === roadsLayer || e.layer === addressesLayer || e.layer === parcelsLayer) {
         fetchViewportData();
     }
     updateLegend();
 });
+
+// ===================================================================================================================================================== //
+// DEDICATED CRIME FILTER FUNCTIONS                                                                                                                      //
+// ===================================================================================================================================================== //
+
+function toggleCrimeFilterModal() {
+    const modal = document.getElementById('crimeFilterModal');
+    if (modal) {
+        modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
+    }
+}
+
+function populateCrimeTypeDropdown(data) {
+    const select = document.getElementById('crime-type-select');
+    if (!select || !data || !data.features) return;
+
+    // Extract unique crime types from the features
+    const types = new Set();
+    data.features.forEach(f => {
+        const type = f.properties.cr_ucr_tra || f.properties.CATEGORY;
+        if (type) types.add(type);
+    });
+
+    select.innerHTML = '<option value="ALL">-- Show All Crime Types --</option>';
+    Array.from(types).sort().forEach(type => {
+        const opt = document.createElement('option');
+        opt.value = type;
+        opt.innerText = type;
+        select.appendChild(opt);
+    });
+}
+
+function filterCrimeData() {
+    const selectedType = document.getElementById('crime-type-select').value;
+    const statusDiv = document.getElementById('crime-filter-status');
+
+    if (!crimeData || !crimeData.features) return;
+
+    let filtered;
+    if (selectedType === 'ALL') {
+        filtered = crimeData.features;
+    } else {
+        filtered = crimeData.features.filter(f => {
+            const val = f.properties.cr_ucr_tra || f.properties.CATEGORY;
+            return val === selectedType;
+        });
+    }
+
+    crimeLayer.clearLayers();
+    crimeLayer.addLayer(createCrimeLayer({ type: "FeatureCollection", features: filtered }));
+
+    if (statusDiv) {
+        statusDiv.innerText = `Displaying ${filtered.length} of ${crimeData.features.length} incidents.`;
+    }
+}
+
+function resetCrimeFilter() {
+    const select = document.getElementById('crime-type-select');
+    const statusDiv = document.getElementById('crime-filter-status');
+    if (select) select.value = 'ALL';
+    
+    crimeLayer.clearLayers();
+    crimeLayer.addLayer(createCrimeLayer(crimeData));
+    
+    if (statusDiv) {
+        statusDiv.innerText = `Reset complete. Displaying all ${crimeData.features.length} incidents.`;
+    }
+}
 
 // ===================================================================================================================================================== //
 // FUNCTIONS - BUFFER, ATTRIBUTE TABLE, SEARCH & QUERY                                                                                                 //
@@ -435,7 +475,7 @@ function renderTable(data) {
     });
 }
 
-// Query Modal Logic
+// General Query Modal Logic
 function toggleQueryModal() {
     const modal = document.getElementById('queryModal');
     if (modal.style.display !== 'flex') updateQueryFields(); 
@@ -546,6 +586,7 @@ L.control.scale().addTo(map);
 L.Control.geocoder({ defaultMarkGeocode: true, collapsed: true, placeholder: 'Search location...' }).addTo(map);
 L.control.layers(baseMaps, overlayMaps).addTo(map);
 
+// Navigation Bar Controls (With Dedicated Crime Filter Button)
 const navControl = L.Control.extend({
     options: { position: 'topleft' },
     onAdd: function() {
@@ -558,7 +599,8 @@ const navControl = L.Control.extend({
         };
         createBtn('fa-solid fa-circle-info', 'Info', toggleInfoModal);
         createBtn('fa-solid fa-house', 'Home', goHome);
-        createBtn('fa-solid fa-filter', 'Query', toggleQueryModal);
+        createBtn('fa-solid fa-filter', 'Query Builder', toggleQueryModal);
+        createBtn('fa-solid fa-mask', 'Crime Filter', toggleCrimeFilterModal);
         createBtn('fa-solid fa-table-list', 'Table', toggleAttributeTable);
         return c;
     }
@@ -583,7 +625,6 @@ function updateLegend() {
 
     let itemsHtml = "";
 
-    // 1. York Boundary
     if (map.hasLayer(yorkLayer)) {
         itemsHtml += `
             <div class="legend-row">
@@ -591,7 +632,6 @@ function updateLegend() {
             </div>`;
     }
 
-    // 2. Police Stations
     if (map.hasLayer(policeLayer)) {
         itemsHtml += `
             <div class="legend-row">
@@ -599,24 +639,19 @@ function updateLegend() {
             </div>`;
     }
 
-// 3. Crime Occurrences
-if (map.hasLayer(crimeLayer)) {
-    itemsHtml += `
-        <div class="legend-row">
-            <i class="legend-symbol" style="background: #d9534f; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> High-Risk Incident
-        </div>
-        <div class="legend-row">
-            <i class="legend-symbol" style="background: #f0ad4e; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> Property / Theft Incident
-        </div>
-        <div class="legend-row">
-            <i class="legend-symbol" style="background: #5bc0de; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> B&E / Mischief
-        </div>
-        <div class="legend-row">
-            <i class="legend-symbol" style="background: #3388ff; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> Other Incident
-        </div>`;
-}
+    if (map.hasLayer(crimeLayer)) {
+        itemsHtml += `
+            <div class="legend-row">
+                <i class="legend-symbol" style="background: #d9534f; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> High-Risk Incident
+            </div>
+            <div class="legend-row">
+                <i class="legend-symbol" style="background: #f0ad4e; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> Property / Theft Incident
+            </div>
+            <div class="legend-row">
+                <i class="legend-symbol" style="background: #5bc0de; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> B&E / Mischief / Other
+            </div>`;
+    }
 
-    // 4. Roads
     if (map.hasLayer(roadsLayer)) {
         itemsHtml += `
             <div class="legend-row">
@@ -624,7 +659,6 @@ if (map.hasLayer(crimeLayer)) {
             </div>`;
     }
 
-    // 5. Addresses
     if (map.hasLayer(addressesLayer)) {
         itemsHtml += `
             <div class="legend-row">
@@ -632,7 +666,6 @@ if (map.hasLayer(crimeLayer)) {
             </div>`;
     }
 
-    // 6. Parcels
     if (map.hasLayer(parcelsLayer)) {
         itemsHtml += `
             <div class="legend-row">
