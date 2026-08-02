@@ -95,12 +95,23 @@
     <div id="crimeFilterModal" class="modal-backdrop">
         <div class="modal-content">
             <div class="modal-header">
-                <span><i class="fa-solid fa-mask"></i> Crime Category Filter</span>
+                <span><i class="fa-solid fa-mask"></i> Crime Category & Offense Filter</span>
                 <span class="close-btn" onclick="toggleCrimeFilterModal()">&times;</span>
+            </div>
+
+            <div class="query-row">
+                <label>Filter by Risk Level:</label>
+                <select id="crime-risk-select" onchange="filterCrimeData()">
+                    <option value="ALL">-- All Risk Levels --</option>
+                    <option value="HIGH_RISK">High-Risk Incident (Red)</option>
+                    <option value="PROPERTY">Property / Theft Incident (Orange)</option>
+                    <option value="BE_MISCHIEF">B&E / Mischief (Light Blue)</option>
+                    <option value="OTHER">Other Incident (Dark Blue)</option>
+                </select>
             </div>
             
             <div class="query-row">
-                <label>Filter by Incident Type:</label>
+                <label>Filter by Specific Offense Type:</label>
                 <select id="crime-type-select" onchange="filterCrimeData()">
                     <option value="ALL">Loading Crime Types...</option>
                 </select>
@@ -108,7 +119,7 @@
 
             <div class="query-actions">
                 <button class="btn-primary" onclick="filterCrimeData()">Apply Filter</button>
-                <button class="btn-secondary" onclick="resetCrimeFilter()">Reset</button>
+                <button class="btn-secondary" onclick="resetCrimeFilter()">Reset Filter</button>
             </div>
             
             <div id="crime-filter-status" style="margin-top:10px; font-size:12px; color:#666;"></div>
@@ -168,7 +179,8 @@
     <!-- Leaflet & Heatmap Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://unpkg.com/leaflet.pattern/dist/leaflet.pattern.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet-markercluster.js"></script>
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
     <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
