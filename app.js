@@ -1,4 +1,4 @@
-// APP JavaScript File - York Region Environmental & Planning Web Map
+// APP JavaScript File - York Regional Police Public Safety Web Map
 
 // ===================================================================================================================================================== //
 // MAP INITIALIZATION                                                                                                                                    //
@@ -24,6 +24,11 @@ let parcelsData = { type: "FeatureCollection", features: [] };
 let bufferResultsData = { type: "FeatureCollection", features: [] };
 let filteredQueryData = null; 
 const bufferLayerGroup = L.layerGroup().addTo(map);
+
+// Heatmap & Operational Layers
+let crimeHeatmapLayer = null;
+let currentShiftFilter = "ALL"; // "ALL", "DAY", "NIGHT"
+let currentPersonaMode = "ANALYST"; // "ANALYST", "OFFICER"
 
 // ===================================================================================================================================================== //
 // BASEMAPS                                                                                                                                              //
@@ -103,7 +108,7 @@ fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Police
     })
     .catch(err => console.error("Error loading Police Stations GeoJSON:", err));
 
-// 3. Crime Occurrences Layer
+// 3. Crime Occurrences Layer & Heatmap Integration
 const crimeLayer = L.layerGroup().addTo(map);
 
 function getCrimeColor(type) {
@@ -115,9 +120,17 @@ function getCrimeColor(type) {
     return "#3388ff";                                                                            
 }
 
+function isHighRiskCrime(type) {
+    if (!type) return false;
+    const t = type.toString().toUpperCase();
+    return t.includes("ROBBERY") || t.includes("ASSAULT") || t.includes("WEAPON");
+}
+
 function createCrimeLayer(data) {
     const layerGroup = L.layerGroup();
     if (!data || !data.features) return layerGroup;
+
+    const heatPoints = [];
 
     data.features.forEach(feature => {
         let lat, lng;
@@ -135,20 +148,32 @@ function createCrimeLayer(data) {
         if (!isNaN(lat) && !isNaN(lng)) {
             const crimeType = feature.properties.cr_ucr_tra || feature.properties.CATEGORY || "Incident";
             const color = getCrimeColor(crimeType);
+            const highRisk = isHighRiskCrime(crimeType);
 
+            // Add point to Heatmap array (weight increased for high risk)
+            heatPoints.push([lat, lng, highRisk ? 1.0 : 0.6]);
+
+            // Create Marker (with optional pulsing border if High-Risk)
             const marker = L.circleMarker([lat, lng], {
-                radius: 6,
+                radius: highRisk ? 8 : 6,
                 fillColor: color,
-                color: "#000000",
-                weight: 1,
+                color: highRisk ? "#ff0000" : "#000000",
+                weight: highRisk ? 2 : 1,
                 opacity: 1,
-                fillOpacity: 0.85
+                fillOpacity: 0.85,
+                className: highRisk ? 'pulsing-hazard-marker' : ''
             });
 
             bindPopupWithBuffer(feature, marker);
             layerGroup.addLayer(marker);
         }
     });
+
+    // Re-build or update Leaflet Heatmap Layer if plugin is available
+    if (typeof L.heatLayer === 'function') {
+        if (crimeHeatmapLayer) map.removeLayer(crimeHeatmapLayer);
+        crimeHeatmapLayer = L.heatLayer(heatPoints, { radius: 25, blur: 15, maxZoom: 15 });
+    }
 
     return layerGroup;
 }
@@ -160,6 +185,7 @@ fetch('yk_crime_rpt22.json')
         crimeLayer.clearLayers();
         crimeLayer.addLayer(createCrimeLayer(data));
         populateCrimeTypeDropdown(data);
+        updateOperationalBriefingCard();
         updateLegend();
     })
     .catch(err => console.error("Error loading Crime GeoJSON:", err));
@@ -217,7 +243,10 @@ function fetchViewportData() {
     }
 }
 
-map.on('moveend', fetchViewportData);
+map.on('moveend', () => {
+    fetchViewportData();
+    updateOperationalBriefingCard();
+});
 
 map.on('overlayadd overlayremove', function(e) {
     if (e.layer === roadsLayer || e.layer === addressesLayer || e.layer === parcelsLayer) {
@@ -227,21 +256,130 @@ map.on('overlayadd overlayremove', function(e) {
 });
 
 // ===================================================================================================================================================== //
-// DEDICATED CRIME FILTER FUNCTIONS                                                                                                                      //
+// OPERATIONAL SHIFT & PERSONA CONTROLS (ANALYST VS FRONT-LINE OFFICER)                                                                                 //
+// ===================================================================================================================================================== //
+
+function setPersonaMode(mode) {
+    currentPersonaMode = mode;
+    const analystBtn = document.getElementById('btn-persona-analyst');
+    const officerBtn = document.getElementById('btn-persona-officer');
+    const shiftBar = document.getElementById('shift-filter-bar');
+
+    if (mode === 'OFFICER') {
+        if (analystBtn) analystBtn.classList.remove('active');
+        if (officerBtn) officerBtn.classList.add('active');
+        if (shiftBar) shiftBar.style.display = 'flex';
+        // Auto-enable incident points, disable heat map if active
+        if (crimeHeatmapLayer && map.hasLayer(crimeHeatmapLayer)) map.removeLayer(crimeHeatmapLayer);
+        if (!map.hasLayer(crimeLayer)) map.addLayer(crimeLayer);
+    } else {
+        if (officerBtn) officerBtn.classList.remove('active');
+        if (analystBtn) analystBtn.classList.add('active');
+        if (shiftBar) shiftBar.style.display = 'none';
+        setShiftFilter('ALL');
+    }
+    updateOperationalBriefingCard();
+}
+
+function setShiftFilter(shift) {
+    currentShiftFilter = shift;
+    document.querySelectorAll('.btn-shift').forEach(b => b.classList.remove('active'));
+    const activeBtn = document.getElementById(`btn-shift-${shift.toLowerCase()}`);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    applyCombinedFilters();
+}
+
+function toggleHeatmap() {
+    if (!crimeHeatmapLayer) return alert("Heatmap initializing...");
+    if (map.hasLayer(crimeHeatmapLayer)) {
+        map.removeLayer(crimeHeatmapLayer);
+    } else {
+        map.addLayer(crimeHeatmapLayer);
+    }
+}
+
+function applyCombinedFilters() {
+    if (!crimeData || !crimeData.features) return;
+
+    const selectedCrimeType = document.getElementById('crime-type-select') ? document.getElementById('crime-type-select').value : 'ALL';
+
+    const filtered = crimeData.features.filter(f => {
+        const props = f.properties || {};
+        
+        // 1. Offense Type Filter
+        const typeMatch = (selectedCrimeType === 'ALL') || 
+            ((props.cr_ucr_tra || props.CATEGORY) === selectedCrimeType);
+
+        // 2. Shift Filter Parsing (occ_time: e.g., 0700 to 1900 is DAY shift)
+        let shiftMatch = true;
+        if (currentShiftFilter !== 'ALL') {
+            const rawTime = parseInt(props.occ_time, 10);
+            if (!isNaN(rawTime)) {
+                const isDay = (rawTime >= 700 && rawTime < 1900);
+                shiftMatch = (currentShiftFilter === 'DAY') ? isDay : !isDay;
+            }
+        }
+
+        return typeMatch && shiftMatch;
+    });
+
+    crimeLayer.clearLayers();
+    crimeLayer.addLayer(createCrimeLayer({ type: "FeatureCollection", features: filtered }));
+    updateOperationalBriefingCard();
+}
+
+// Operational Briefing Card Logic (Dynamic Summary for Active Viewport)
+function updateOperationalBriefingCard() {
+    const briefingDiv = document.getElementById('operational-briefing-content');
+    if (!briefingDiv || !crimeData.features) return;
+
+    const bounds = map.getBounds();
+    let totalInView = 0;
+    let highRiskCount = 0;
+    const categoryCounts = {};
+
+    crimeData.features.forEach(f => {
+        let lat, lng;
+        if (f.geometry && f.geometry.coordinates) {
+            lng = parseFloat(f.geometry.coordinates[0]);
+            lat = parseFloat(f.geometry.coordinates[1]);
+        } else if (f.properties) {
+            lng = parseFloat(f.properties.X);
+            lat = parseFloat(f.properties.Y);
+        }
+
+        if (!isNaN(lat) && !isNaN(lng) && bounds.contains([lat, lng])) {
+            const type = f.properties.cr_ucr_tra || f.properties.CATEGORY || "Other";
+            totalInView++;
+            if (isHighRiskCrime(type)) highRiskCount++;
+            categoryCounts[type] = (categoryCounts[type] || 0) + 1;
+        }
+    });
+
+    const topOffense = Object.keys(categoryCounts).sort((a, b) => categoryCounts[b] - categoryCounts[a])[0] || "None";
+
+    briefingDiv.innerHTML = `
+        <div class="briefing-stat-row"><span>Incidents in View:</span> <b>${totalInView}</b></div>
+        <div class="briefing-stat-row"><span>High-Risk Hazards:</span> <b style="color:#d9534f;">${highRiskCount}</b></div>
+        <div class="briefing-stat-row"><span>Primary Offense:</span> <b>${topOffense.substring(0, 22)}</b></div>
+        <div class="briefing-stat-row"><span>Active Shift:</span> <b>${currentShiftFilter}</b></div>
+    `;
+}
+
+// ===================================================================================================================================================== //
+// CRIME FILTER MODAL FUNCTIONS                                                                                                                          //
 // ===================================================================================================================================================== //
 
 function toggleCrimeFilterModal() {
     const modal = document.getElementById('crimeFilterModal');
-    if (modal) {
-        modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
-    }
+    if (modal) modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
 }
 
 function populateCrimeTypeDropdown(data) {
     const select = document.getElementById('crime-type-select');
     if (!select || !data || !data.features) return;
 
-    // Extract unique crime types from the features
     const types = new Set();
     data.features.forEach(f => {
         const type = f.properties.cr_ucr_tra || f.properties.CATEGORY;
@@ -258,40 +396,14 @@ function populateCrimeTypeDropdown(data) {
 }
 
 function filterCrimeData() {
-    const selectedType = document.getElementById('crime-type-select').value;
-    const statusDiv = document.getElementById('crime-filter-status');
-
-    if (!crimeData || !crimeData.features) return;
-
-    let filtered;
-    if (selectedType === 'ALL') {
-        filtered = crimeData.features;
-    } else {
-        filtered = crimeData.features.filter(f => {
-            const val = f.properties.cr_ucr_tra || f.properties.CATEGORY;
-            return val === selectedType;
-        });
-    }
-
-    crimeLayer.clearLayers();
-    crimeLayer.addLayer(createCrimeLayer({ type: "FeatureCollection", features: filtered }));
-
-    if (statusDiv) {
-        statusDiv.innerText = `Displaying ${filtered.length} of ${crimeData.features.length} incidents.`;
-    }
+    applyCombinedFilters();
 }
 
 function resetCrimeFilter() {
     const select = document.getElementById('crime-type-select');
-    const statusDiv = document.getElementById('crime-filter-status');
     if (select) select.value = 'ALL';
-    
-    crimeLayer.clearLayers();
-    crimeLayer.addLayer(createCrimeLayer(crimeData));
-    
-    if (statusDiv) {
-        statusDiv.innerText = `Reset complete. Displaying all ${crimeData.features.length} incidents.`;
-    }
+    currentShiftFilter = 'ALL';
+    applyCombinedFilters();
 }
 
 // ===================================================================================================================================================== //
@@ -475,7 +587,7 @@ function renderTable(data) {
     });
 }
 
-// General Query Modal Logic
+// Query Modal Logic
 function toggleQueryModal() {
     const modal = document.getElementById('queryModal');
     if (modal.style.display !== 'flex') updateQueryFields(); 
@@ -586,7 +698,7 @@ L.control.scale().addTo(map);
 L.Control.geocoder({ defaultMarkGeocode: true, collapsed: true, placeholder: 'Search location...' }).addTo(map);
 L.control.layers(baseMaps, overlayMaps).addTo(map);
 
-// Navigation Bar Controls (With Dedicated Crime Filter Button)
+// Navigation Bar Controls
 const navControl = L.Control.extend({
     options: { position: 'topleft' },
     onAdd: function() {
@@ -601,6 +713,7 @@ const navControl = L.Control.extend({
         createBtn('fa-solid fa-house', 'Home', goHome);
         createBtn('fa-solid fa-filter', 'Query Builder', toggleQueryModal);
         createBtn('fa-solid fa-mask', 'Crime Filter', toggleCrimeFilterModal);
+        createBtn('fa-solid fa-fire', 'Toggle Heatmap', toggleHeatmap);
         createBtn('fa-solid fa-table-list', 'Table', toggleAttributeTable);
         return c;
     }
