@@ -40,7 +40,7 @@ body {
     border-radius: 6px;
     padding: 10px 14px;
     color: #333;
-    min-width: 160px;
+    min-width: 170px;
     font-size: 13px;
     line-height: 1.4;
 }
@@ -56,14 +56,15 @@ body {
 .legend-row {
     display: flex;
     align-items: center;
-    margin-bottom: 5px;
+    margin-bottom: 6px;
 }
 .legend-symbol {
-    display: inline-block;
-    width: 18px;
-    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
     margin-right: 8px;
-    text-align: center;
     flex-shrink: 0;
 }
 
