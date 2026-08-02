@@ -73,7 +73,7 @@ fetch('https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Boundary/MapServer/
     })
     .catch(err => console.error("Error loading York Boundaries GeoJSON:", err));
 
-// 2. Police Stations Layer
+// 2. Police Stations Layer (Standard Layer Group - NO CLUSTERING)
 const policeLayer = L.layerGroup().addTo(map);
 
 function createPoliceLayer(data) {
@@ -105,7 +105,7 @@ fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Police
     })
     .catch(err => console.error("Error loading Police Stations GeoJSON:", err));
 
-// 3. Crime Occurrences Layer
+// 3. Crime Occurrences Layer (Hardened Point Parser - NO CLUSTERING)
 const crimeLayer = L.layerGroup().addTo(map);
 
 function getCrimeColor(type) {
@@ -124,16 +124,19 @@ function createCrimeLayer(data) {
     data.features.forEach(feature => {
         let lat, lng;
 
+        // Try extracting geometry coordinates first
         if (feature.geometry && feature.geometry.coordinates) {
             lng = parseFloat(feature.geometry.coordinates[0]);
             lat = parseFloat(feature.geometry.coordinates[1]);
         }
         
+        // Fallback to explicit X/Y property keys from GeoJSON
         if ((isNaN(lat) || isNaN(lng)) && feature.properties) {
             lng = parseFloat(feature.properties.X);
             lat = parseFloat(feature.properties.Y);
         }
 
+        // Only create marker if valid latitude & longitude are resolved
         if (!isNaN(lat) && !isNaN(lng)) {
             const crimeType = feature.properties.cr_ucr_tra || feature.properties.CATEGORY || "Incident";
             const color = getCrimeColor(crimeType);
@@ -603,7 +606,10 @@ function updateLegend() {
                 <i class="legend-symbol" style="background: #d9534f; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> High-Risk Incident
             </div>
             <div class="legend-row">
-                <i class="legend-symbol" style="background: #f0ad4e; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> Property Incident
+                <i class="legend-symbol" style="background: #f0ad4e; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> Property / Theft Incident
+            </div>
+            <div class="legend-row">
+                <i class="legend-symbol" style="background: #5bc0de; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> B&E / Mischief / Other
             </div>`;
     }
 
@@ -631,7 +637,6 @@ function updateLegend() {
             </div>`;
     }
 
-    // If no layers are active, hide or display empty message
     if (itemsHtml === "") {
         legendContainerDiv.style.display = "none";
     } else {
