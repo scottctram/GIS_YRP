@@ -103,13 +103,8 @@ fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Police
     })
     .catch(err => console.error("Error loading Police Stations GeoJSON:", err));
 
-// 3. Crime Occurrences Layer (Marker Cluster Active)
-const crimeLayer = L.markerClusterGroup({
-    spiderfyOnMaxZoom: true,
-    showCoverageOnHover: false,
-    zoomToBoundsOnClick: true,
-    spiderfyDistanceMultiplier: 2.5
-}).addTo(map);
+// 3. Crime Occurrences Layer (Standard Layer Group - NO CLUSTERING for direct points)
+const crimeLayer = L.layerGroup().addTo(map);
 
 function getCrimeColor(type) {
     if (!type) return "#3388ff";
