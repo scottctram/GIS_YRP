@@ -43,6 +43,8 @@
                 <select id="q-field"></select>
             </div>
 
+
+            
             <div class="query-row">
                 <label>Operator:</label>
                 <select id="q-operator">
@@ -66,6 +68,30 @@
         </div>
     </div>
 
+<!-- Dedicated Crime Filter Modal -->
+<div id="crimeFilterModal" class="modal-backdrop">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span><i class="fa-solid fa-mask"></i> Crime Category Filter</span>
+            <span class="close-btn" onclick="toggleCrimeFilterModal()">&times;</span>
+        </div>
+        
+        <div class="query-row">
+            <label>Filter by Incident Type:</label>
+            <select id="crime-type-select" onchange="filterCrimeData()">
+                <option value="ALL">Loading Crime Types...</option>
+            </select>
+        </div>
+
+        <div class="query-actions">
+            <button class="btn-primary" onclick="filterCrimeData()">Apply Filter</button>
+            <button class="btn-secondary" onclick="resetCrimeFilter()">Reset</button>
+        </div>
+        
+        <div id="crime-filter-status" style="margin-top:10px; font-size:12px; color:#666;"></div>
+    </div>
+</div>
+    
     <!-- Info Modal -->
     <div id="infoModal" class="modal-backdrop">
         <div class="modal-content" style="max-width: 400px;">
