@@ -242,13 +242,14 @@ function initiateBuffer(feature) {
     
     map.fitBounds(bufferVis.getBounds());
 
+    // Defined preferred alias fields for each layer
     const sources = [
-        { name: "York Boundary", list: yorkData.features },
-        { name: "Roads", list: roadsData.features },
-        { name: "Addresses", list: addressesData.features },
-        { name: "Parcels", list: parcelsData.features },
-        { name: "Police Stations", list: policeData.features },
-        { name: "Crime Occurrences", list: crimeData.features }
+        { name: "York Boundary", list: yorkData.features, aliasKey: "NAME" },
+        { name: "Roads", list: roadsData.features, aliasKey: "STREET_NAME" },
+        { name: "Addresses", list: addressesData.features, aliasKey: "FULL_ADDRESS" },
+        { name: "Parcels", list: parcelsData.features, aliasKey: "ARN" },
+        { name: "Police Stations", list: policeData.features, aliasKey: "NAME" },
+        { name: "Crime Occurrences", list: crimeData.features, aliasKey: "cr_ucr_tra" }
     ];
     
     const foundFeatures = [];
@@ -257,12 +258,29 @@ function initiateBuffer(feature) {
         source.list.forEach(f => {
             try {
                 if (turf.booleanIntersects(f, buffered)) {
-                    const keys = Object.keys(f.properties);
-                    const firstValue = keys.length > 0 ? f.properties[keys[0]] : "Unknown";
+                    const props = f.properties || {};
+                    const keys = Object.keys(props);
+                    
+                    // Primary identifier (fallback to first field if needed)
+                    const idValue = keys.length > 0 ? props[keys[0]] : "Unknown";
+
+                    // Friendly Alias lookup (checks aliasKey first, then common names like 'cr_loc' or 'NAME')
+                    const aliasValue = props[source.aliasKey] 
+                        || props.NAME 
+                        || props.cr_loc 
+                        || props.STREET_NAME 
+                        || props.FULL_ADDRESS 
+                        || "N/A";
+
                     foundFeatures.push({
                         type: "Feature",
                         geometry: f.geometry,
-                        properties: { "Table Name": source.name, "Identifier": firstValue }
+                        properties: { 
+                            "Layer": source.name,
+                            "Identifier": idValue,
+                            "Name / Details": aliasValue,
+                            "Location": props.cr_loc || props.CITY || "York Region"
+                        }
                     });
                 }
             } catch (e) { }
