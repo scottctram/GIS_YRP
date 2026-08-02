@@ -7,11 +7,13 @@
 
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🗺️</text></svg>" />
 
+    <!-- Leaflet & Plugin CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -78,11 +80,11 @@
                 <p>This web map features GIS layers powered directly by the <b>York Region Open Data API</b>:</p>
                 <ul style="padding-left: 20px; margin: 10px 0;">
                     <li><strong>Boundaries:</strong> Regional Limits</li>
-                    <li><strong>Police Stations:</strong> Always-on Station Locations</li>
+                    <li><strong>Police Stations:</strong> Station Locations (Always Visible)</li>
                     <li><strong>Crime Occurrences:</strong> Clustered Incident Reports</li>
-                    <li><strong>Transportation:</strong> Roads (Viewport Loaded)</li>
-                    <li><strong>Locations:</strong> Address Points (Viewport Loaded)</li>
-                    <li><strong>Planning:</strong> Property Parcels (Viewport Loaded)</li>
+                    <li><strong>Transportation:</strong> Roads (Viewport Loaded at Zoom 15+)</li>
+                    <li><strong>Locations:</strong> Address Points (Viewport Loaded at Zoom 15+)</li>
+                    <li><strong>Planning:</strong> Property Parcels (Viewport Loaded at Zoom 15+)</li>
                 </ul>
             </div>
             <div class="query-actions">
@@ -120,9 +122,10 @@
         </div>
     </div>
 
+    <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://unpkg.com/leaflet.pattern/dist/leaflet.pattern.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
     <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
     <script src="app.js"></script>
