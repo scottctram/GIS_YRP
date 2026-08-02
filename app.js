@@ -1,3 +1,5 @@
+// APP JavaScript File - York Region Environmental & Planning Web Map
+
 // ===================================================================================================================================================== //
 // MAP INITIALIZATION                                                                                                                                    //
 // ===================================================================================================================================================== //
@@ -32,7 +34,7 @@ const osmLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri' });
 const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO', subdomains: 'abcd', maxZoom: 20 });
 
-// Helper: Makeshift Popup displaying feature fields and a Buffer Trigger
+// Helper: Popup displaying feature fields and a Buffer Trigger
 function bindPopupWithBuffer(feature, layer) {
     const div = document.createElement('div');
     div.className = 'popup-content';
@@ -70,7 +72,7 @@ fetch('https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Boundary/MapServer/
     })
     .catch(err => console.error("Error loading York Boundaries GeoJSON:", err));
 
-// 2. Police Stations Layer (Standard Layer Group to DISABLE CLUSTERING)
+// 2. Police Stations Layer (Standard Layer Group - NO CLUSTERING)
 const policeLayer = L.layerGroup().addTo(map);
 
 function createPoliceLayer(data) {
@@ -101,7 +103,7 @@ fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Police
     })
     .catch(err => console.error("Error loading Police Stations GeoJSON:", err));
 
-// 3. Crime Occurrences Layer (Marker Cluster KEPT ACTIVE)
+// 3. Crime Occurrences Layer (Marker Cluster Active)
 const crimeLayer = L.markerClusterGroup({
     spiderfyOnMaxZoom: true,
     showCoverageOnHover: false,
@@ -147,29 +149,29 @@ fetch('yk_crime_rpt22.json')
     .catch(err => console.error("Error loading Crime GeoJSON:", err));
 
 // ===================================================================================================================================================== //
-// DYNAMIC VIEWPORT (BBOX) LAYERS (ROADS, ADDRESSES, PARCELS)                                                                                           //
+// DYNAMIC VIEWPORT (BBOX) LAYERS (ROADS, ADDRESSES, PARCELS) - OFF BY DEFAULT                                                                           //
 // ===================================================================================================================================================== //
 
-// Roads Layer
+// Roads Layer (OFF by default)
 const roadsLayer = L.geoJSON(null, {
     style: { color: "#555555", weight: 2, opacity: 0.8 },
     onEachFeature: bindPopupWithBuffer
-}).addTo(map);
+});
 
-// Addresses Layer
+// Addresses Layer (OFF by default)
 const addressesLayer = L.markerClusterGroup({
     spiderfyOnMaxZoom: true,
     showCoverageOnHover: false,
     zoomToBoundsOnClick: true
-}).addTo(map);
+});
 
-// Parcels Layer
+// Parcels Layer (OFF by default)
 const parcelsLayer = L.geoJSON(null, {
     style: { color: "#228b22", weight: 1, opacity: 0.8, fillOpacity: 0.2 },
     onEachFeature: bindPopupWithBuffer
-}).addTo(map);
+});
 
-// Function to fetch BBOX features dynamically when zoomed in
+// Function to fetch BBOX features dynamically when zoomed in and layer is active
 function fetchViewportData() {
     const currentZoom = map.getZoom();
 
@@ -185,7 +187,7 @@ function fetchViewportData() {
 
     const bbox = map.getBounds().toBBoxString();
 
-    // 1. Fetch Roads inside Viewport (only if layer is turned ON)
+    // 1. Fetch Roads inside Viewport (only if layer is active)
     if (map.hasLayer(roadsLayer)) {
         fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Transportation/MapServer/1/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
             .then(res => res.json())
@@ -197,7 +199,7 @@ function fetchViewportData() {
             .catch(err => console.error("Error fetching BBOX Roads:", err));
     }
 
-    // 2. Fetch Addresses inside Viewport (only if layer is turned ON)
+    // 2. Fetch Addresses inside Viewport (only if layer is active)
     if (map.hasLayer(addressesLayer)) {
         fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Location/MapServer/0/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
             .then(res => res.json())
@@ -213,7 +215,7 @@ function fetchViewportData() {
             .catch(err => console.error("Error fetching BBOX Addresses:", err));
     }
 
-    // 3. Fetch Parcels inside Viewport (only if layer is turned ON)
+    // 3. Fetch Parcels inside Viewport (only if layer is active)
     if (map.hasLayer(parcelsLayer)) {
         fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Planning/FeatureServer/0/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
             .then(res => res.json())
@@ -226,8 +228,15 @@ function fetchViewportData() {
     }
 }
 
-// Trigger query every time user finishes zooming or panning
+// Trigger query on pan/zoom
 map.on('moveend', fetchViewportData);
+
+// Fetch data immediately when a user toggles an overlay on
+map.on('overlayadd', function(e) {
+    if (e.layer === roadsLayer || e.layer === addressesLayer || e.layer === parcelsLayer) {
+        fetchViewportData();
+    }
+});
 
 // ===================================================================================================================================================== //
 // FUNCTIONS - BUFFER, ATTRIBUTE TABLE, SEARCH & QUERY                                                                                                 //
@@ -248,7 +257,7 @@ function initiateBuffer(feature) {
     
     map.fitBounds(bufferVis.getBounds());
 
-    // Configured exact schema targets based on prioritized layer attributes
+    // Schema mapping targets
     const sources = [
         { name: "York Boundary", list: yorkData.features, aliasKey: "NAME", locKey: "MUNICIPALITY" },
         { name: "Roads", list: roadsData.features, aliasKey: "STREET_NAME", locKey: "FULL_CIVIC_ADDR" },
@@ -267,17 +276,14 @@ function initiateBuffer(feature) {
                     const props = f.properties || {};
                     const keys = Object.keys(props);
                     
-                    // Primary identifier (fallback to first field if available)
                     const idValue = keys.length > 0 ? props[keys[0]] : "Unknown";
 
-                    // Name / Details lookup
                     const aliasValue = props[source.aliasKey] 
                         || props.NAME 
                         || props.STREET_NAME 
                         || props.FULL_ADDRESS 
                         || "N/A";
 
-                    // Location lookup with explicitly prioritized fields
                     const locationValue = props[source.locKey] 
                         || props.cr_loc 
                         || props.LOCATION 
@@ -374,7 +380,7 @@ function renderTable(data) {
     tbody.innerHTML = '';
 
     if (!data.features || data.features.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5">No features loaded in view. Please zoom in closer (Zoom level 15+).</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5">No features loaded in view. Please turn on layers and zoom in closer (Zoom level 15+).</td></tr>';
         return;
     }
 
