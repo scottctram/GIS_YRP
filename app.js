@@ -1,5 +1,3 @@
-// APP JavaScript File - York Region Environmental & Planning Web Map
-
 // ===================================================================================================================================================== //
 // MAP INITIALIZATION                                                                                                                                    //
 // ===================================================================================================================================================== //
@@ -557,7 +555,7 @@ legend.onAdd = function () {
     div.innerHTML = `
         <h4>Legend</h4>
         <div class="legend-row">
-            <i class="legend-symbol" style="background: rgba(128, 0, 32, 0.2); border: 2px solid #800020;"></i> York Boundary
+            <i class="legend-symbol" style="background: rgba(128, 0, 32, 0.2); border: 2px solid #800020; width:16px; height:16px;"></i> York Boundary
         </div>
         <div class="legend-row">
             <i class="legend-symbol fa-solid fa-building-shield" style="color: #003399; font-size: 15px;"></i> Police Stations
@@ -570,13 +568,13 @@ legend.onAdd = function () {
         </div>
         <hr style="margin: 6px 0;">
         <div class="legend-row">
-            <i class="legend-symbol" style="background: #555; height: 3px; margin-top: 7px;"></i> Roads (Zoom 15+)
+            <i class="legend-symbol" style="background: #555; height: 3px; width:16px;"></i> Roads (Zoom 15+)
         </div>
         <div class="legend-row">
-            <i class="legend-symbol" style="background: #3388ff; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px; margin-left: 3px; margin-right: 11px;"></i> Addresses (Zoom 15+)
+            <i class="legend-symbol" style="background: #3388ff; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> Addresses (Zoom 15+)
         </div>
         <div class="legend-row">
-            <i class="legend-symbol" style="background: rgba(34, 139, 34, 0.2); border: 1px solid #228b22;"></i> Parcels (Zoom 15+)
+            <i class="legend-symbol" style="background: rgba(34, 139, 34, 0.2); border: 1px solid #228b22; width:16px; height:16px;"></i> Parcels (Zoom 15+)
         </div>
     `;
     return div;
