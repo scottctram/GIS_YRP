@@ -1,5 +1,3 @@
-// APP JavaScript File - York Region Environmental & Planning Web Map
-
 // ===================================================================================================================================================== //
 // MAP INITIALIZATION                                                                                                                                    //
 // ===================================================================================================================================================== //
@@ -556,14 +554,28 @@ legend.onAdd = function () {
     const div = L.DomUtil.create('div', 'info legend');
     div.innerHTML = `
         <h4>Legend</h4>
-        <i style="background: rgba(128, 0, 32, 0.2); border: 2px solid #800020;"></i> York Boundary<br>
-        <i class="fa-solid fa-building-shield" style="color: #003399; font-size: 14px;"></i> Police Stations<br>
-        <i class="fa-solid fa-shield-halved" style="color: #d9534f; font-size: 14px;"></i> High-Risk Incident<br>
-        <i class="fa-solid fa-shield-halved" style="color: #f0ad4e; font-size: 14px;"></i> Property Incident<br>
-        <hr style="margin: 5px 0;">
-        <i style="background: #555"></i> Roads (Zoom 15+)<br>
-        <i style="background: #3388ff; border-radius: 50%;"></i> Addresses (Zoom 15+)<br>
-        <i style="background: rgba(34, 139, 34, 0.2); border: 1px solid #228b22;"></i> Parcels (Zoom 15+)
+        <div class="legend-row">
+            <i class="legend-symbol" style="background: rgba(128, 0, 32, 0.2); border: 2px solid #800020;"></i> York Boundary
+        </div>
+        <div class="legend-row">
+            <i class="legend-symbol fa-solid fa-building-shield" style="color: #003399; font-size: 15px;"></i> Police Stations
+        </div>
+        <div class="legend-row">
+            <i class="legend-symbol fa-solid fa-shield-halved" style="color: #d9534f; font-size: 15px;"></i> High-Risk Incident
+        </div>
+        <div class="legend-row">
+            <i class="legend-symbol fa-solid fa-shield-halved" style="color: #f0ad4e; font-size: 15px;"></i> Property Incident
+        </div>
+        <hr style="margin: 6px 0;">
+        <div class="legend-row">
+            <i class="legend-symbol" style="background: #555; height: 3px; margin-top: 7px;"></i> Roads (Zoom 15+)
+        </div>
+        <div class="legend-row">
+            <i class="legend-symbol" style="background: #3388ff; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px; margin-left: 3px; margin-right: 11px;"></i> Addresses (Zoom 15+)
+        </div>
+        <div class="legend-row">
+            <i class="legend-symbol" style="background: rgba(34, 139, 34, 0.2); border: 1px solid #228b22;"></i> Parcels (Zoom 15+)
+        </div>
     `;
     return div;
 };
