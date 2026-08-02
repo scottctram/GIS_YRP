@@ -69,6 +69,7 @@ fetch('https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Boundary/MapServer/
         yorkData = data;
         yorkLayer.addData(data);
         map.addLayer(yorkLayer);
+        updateLegend();
     })
     .catch(err => console.error("Error loading York Boundaries GeoJSON:", err));
 
@@ -78,8 +79,8 @@ const policeLayer = L.layerGroup().addTo(map);
 function createPoliceLayer(data) {
     return L.geoJSON(data, {
         pointToLayer: (feature, latlng) => {
-            const iconHtml = `<div style="display:flex; align-items:center; justify-content:center; width:26px; height:28px; background:#ffffff; border:2px solid #003399; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.4);">
-                <i class="fa-solid fa-building-shield" style="color: #003399; font-size: 14px;"></i>
+            const iconHtml = `<div style="display:flex; align-items:center; justify-content:center; width:28px; height:28px; background:#ffffff; border:2px solid #003399; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.4);">
+                <i class="fa-solid fa-building-shield" style="color: #003399; font-size: 15px;"></i>
             </div>`;
             const policeIcon = L.divIcon({
                 className: 'police-div-icon',
@@ -100,10 +101,11 @@ fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Police
         policeData = data;
         policeLayer.clearLayers();
         policeLayer.addLayer(createPoliceLayer(data));
+        updateLegend();
     })
     .catch(err => console.error("Error loading Police Stations GeoJSON:", err));
 
-// 3. Crime Occurrences Layer (HARDENED POINT PARSER)
+// 3. Crime Occurrences Layer
 const crimeLayer = L.layerGroup().addTo(map);
 
 function getCrimeColor(type) {
@@ -122,24 +124,20 @@ function createCrimeLayer(data) {
     data.features.forEach(feature => {
         let lat, lng;
 
-        // Try extracting geometry coordinates first
         if (feature.geometry && feature.geometry.coordinates) {
             lng = parseFloat(feature.geometry.coordinates[0]);
             lat = parseFloat(feature.geometry.coordinates[1]);
         }
         
-        // Fallback to explicit X/Y property keys from GeoJSON
         if ((isNaN(lat) || isNaN(lng)) && feature.properties) {
             lng = parseFloat(feature.properties.X);
             lat = parseFloat(feature.properties.Y);
         }
 
-        // Only create marker if valid latitude & longitude are resolved
         if (!isNaN(lat) && !isNaN(lng)) {
             const crimeType = feature.properties.cr_ucr_tra || feature.properties.CATEGORY || "Incident";
             const color = getCrimeColor(crimeType);
 
-            // Simple Circle Marker as robust fallback rendering
             const marker = L.circleMarker([lat, lng], {
                 radius: 6,
                 fillColor: color,
@@ -163,6 +161,7 @@ fetch('yk_crime_rpt22.json')
         crimeData = data;
         crimeLayer.clearLayers();
         crimeLayer.addLayer(createCrimeLayer(data));
+        updateLegend();
     })
     .catch(err => console.error("Error loading Crime GeoJSON:", err));
 
@@ -244,10 +243,12 @@ function fetchViewportData() {
 
 map.on('moveend', fetchViewportData);
 
-map.on('overlayadd', function(e) {
+// Listen to overlay add/remove events to dynamically update the map data & legend
+map.on('overlayadd overlayremove', function(e) {
     if (e.layer === roadsLayer || e.layer === addressesLayer || e.layer === parcelsLayer) {
         fetchViewportData();
     }
+    updateLegend();
 });
 
 // ===================================================================================================================================================== //
@@ -561,35 +562,80 @@ const navControl = L.Control.extend({
 });
 map.addControl(new navControl());
 
-// Legend
+// ===================================================================================================================================================== //
+// DYNAMIC LEGEND CONTROL                                                                                                                                //
+// ===================================================================================================================================================== //
 const legend = L.control({ position: 'bottomleft' });
+let legendContainerDiv = null;
+
 legend.onAdd = function () {
-    const div = L.DomUtil.create('div', 'info legend');
-    div.innerHTML = `
-        <h4>Legend</h4>
-        <div class="legend-row">
-            <i class="legend-symbol" style="background: rgba(128, 0, 32, 0.2); border: 2px solid #800020; width:16px; height:16px;"></i> York Boundary
-        </div>
-        <div class="legend-row">
-            <i class="legend-symbol fa-solid fa-building-shield" style="color: #003399; font-size: 15px;"></i> Police Stations
-        </div>
-        <div class="legend-row">
-            <i class="legend-symbol" style="background: #d9534f; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> High-Risk Incident
-        </div>
-        <div class="legend-row">
-            <i class="legend-symbol" style="background: #f0ad4e; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> Property Incident
-        </div>
-        <hr style="margin: 6px 0;">
-        <div class="legend-row">
-            <i class="legend-symbol" style="background: #555; height: 3px; width:16px;"></i> Roads (Zoom 15+)
-        </div>
-        <div class="legend-row">
-            <i class="legend-symbol" style="background: #3388ff; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> Addresses (Zoom 15+)
-        </div>
-        <div class="legend-row">
-            <i class="legend-symbol" style="background: rgba(34, 139, 34, 0.2); border: 1px solid #228b22; width:16px; height:16px;"></i> Parcels (Zoom 15+)
-        </div>
-    `;
-    return div;
+    legendContainerDiv = L.DomUtil.create('div', 'info legend');
+    updateLegend();
+    return legendContainerDiv;
 };
 legend.addTo(map);
+
+function updateLegend() {
+    if (!legendContainerDiv) return;
+
+    let itemsHtml = "";
+
+    // 1. York Boundary
+    if (map.hasLayer(yorkLayer)) {
+        itemsHtml += `
+            <div class="legend-row">
+                <i class="legend-symbol" style="background: rgba(128, 0, 32, 0.2); border: 2px solid #800020; width:16px; height:16px;"></i> York Boundary
+            </div>`;
+    }
+
+    // 2. Police Stations
+    if (map.hasLayer(policeLayer)) {
+        itemsHtml += `
+            <div class="legend-row">
+                <i class="legend-symbol fa-solid fa-building-shield" style="color: #003399; font-size: 15px;"></i> Police Stations
+            </div>`;
+    }
+
+    // 3. Crime Occurrences
+    if (map.hasLayer(crimeLayer)) {
+        itemsHtml += `
+            <div class="legend-row">
+                <i class="legend-symbol" style="background: #d9534f; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> High-Risk Incident
+            </div>
+            <div class="legend-row">
+                <i class="legend-symbol" style="background: #f0ad4e; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> Property Incident
+            </div>`;
+    }
+
+    // 4. Roads
+    if (map.hasLayer(roadsLayer)) {
+        itemsHtml += `
+            <div class="legend-row">
+                <i class="legend-symbol" style="background: #555; height: 3px; width:16px;"></i> Roads (Zoom 15+)
+            </div>`;
+    }
+
+    // 5. Addresses
+    if (map.hasLayer(addressesLayer)) {
+        itemsHtml += `
+            <div class="legend-row">
+                <i class="legend-symbol" style="background: #3388ff; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> Addresses (Zoom 15+)
+            </div>`;
+    }
+
+    // 6. Parcels
+    if (map.hasLayer(parcelsLayer)) {
+        itemsHtml += `
+            <div class="legend-row">
+                <i class="legend-symbol" style="background: rgba(34, 139, 34, 0.2); border: 1px solid #228b22; width:16px; height:16px;"></i> Parcels (Zoom 15+)
+            </div>`;
+    }
+
+    // If no layers are active, hide or display empty message
+    if (itemsHtml === "") {
+        legendContainerDiv.style.display = "none";
+    } else {
+        legendContainerDiv.style.display = "block";
+        legendContainerDiv.innerHTML = `<h4>Legend</h4>` + itemsHtml;
+    }
+}
