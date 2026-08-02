@@ -599,19 +599,22 @@ function updateLegend() {
             </div>`;
     }
 
-    // 3. Crime Occurrences
-    if (map.hasLayer(crimeLayer)) {
-        itemsHtml += `
-            <div class="legend-row">
-                <i class="legend-symbol" style="background: #d9534f; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> High-Risk Incident
-            </div>
-            <div class="legend-row">
-                <i class="legend-symbol" style="background: #f0ad4e; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> Property / Theft Incident
-            </div>
-            <div class="legend-row">
-                <i class="legend-symbol" style="background: #5bc0de; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> B&E / Mischief / Other
-            </div>`;
-    }
+// 3. Crime Occurrences
+if (map.hasLayer(crimeLayer)) {
+    itemsHtml += `
+        <div class="legend-row">
+            <i class="legend-symbol" style="background: #d9534f; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> High-Risk Incident
+        </div>
+        <div class="legend-row">
+            <i class="legend-symbol" style="background: #f0ad4e; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> Property / Theft Incident
+        </div>
+        <div class="legend-row">
+            <i class="legend-symbol" style="background: #5bc0de; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> B&E / Mischief
+        </div>
+        <div class="legend-row">
+            <i class="legend-symbol" style="background: #3388ff; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> Other Incident
+        </div>`;
+}
 
     // 4. Roads
     if (map.hasLayer(roadsLayer)) {
