@@ -242,14 +242,14 @@ function initiateBuffer(feature) {
     
     map.fitBounds(bufferVis.getBounds());
 
-    // Defined preferred alias fields for each layer
+    // Configured exact schema targets based on prioritized layer attributes
     const sources = [
-        { name: "York Boundary", list: yorkData.features, aliasKey: "NAME" },
-        { name: "Roads", list: roadsData.features, aliasKey: "STREET_NAME" },
-        { name: "Addresses", list: addressesData.features, aliasKey: "FULL_ADDRESS" },
-        { name: "Parcels", list: parcelsData.features, aliasKey: "ARN" },
-        { name: "Police Stations", list: policeData.features, aliasKey: "NAME" },
-        { name: "Crime Occurrences", list: crimeData.features, aliasKey: "cr_ucr_tra" }
+        { name: "York Boundary", list: yorkData.features, aliasKey: "NAME", locKey: "MUNICIPALITY" },
+        { name: "Roads", list: roadsData.features, aliasKey: "STREET_NAME", locKey: "FULL_CIVIC_ADDR" },
+        { name: "Addresses", list: addressesData.features, aliasKey: "FULL_ADDRESS", locKey: "MUNICIPALITY" },
+        { name: "Parcels", list: parcelsData.features, aliasKey: "ARN", locKey: "LOCATION" },
+        { name: "Police Stations", list: policeData.features, aliasKey: "NAME", locKey: "ADDRESS" },
+        { name: "Crime Occurrences", list: crimeData.features, aliasKey: "cr_ucr_tra", locKey: "cr_loc" }
     ];
     
     const foundFeatures = [];
@@ -261,16 +261,25 @@ function initiateBuffer(feature) {
                     const props = f.properties || {};
                     const keys = Object.keys(props);
                     
-                    // Primary identifier (fallback to first field if needed)
+                    // Primary identifier (fallback to first field if available)
                     const idValue = keys.length > 0 ? props[keys[0]] : "Unknown";
 
-                    // Friendly Alias lookup (checks aliasKey first, then common names like 'cr_loc' or 'NAME')
+                    // Name / Details lookup
                     const aliasValue = props[source.aliasKey] 
                         || props.NAME 
-                        || props.cr_loc 
                         || props.STREET_NAME 
                         || props.FULL_ADDRESS 
                         || "N/A";
+
+                    // Location lookup with explicitly prioritized fields
+                    const locationValue = props[source.locKey] 
+                        || props.cr_loc 
+                        || props.LOCATION 
+                        || props.FULL_CIVIC_ADDR 
+                        || props.ADDRESS 
+                        || props.MUNICIPALITY 
+                        || props.CITY 
+                        || "York Region";
 
                     foundFeatures.push({
                         type: "Feature",
@@ -279,7 +288,7 @@ function initiateBuffer(feature) {
                             "Layer": source.name,
                             "Identifier": idValue,
                             "Name / Details": aliasValue,
-                            "Location": props.cr_loc || props.CITY || "York Region"
+                            "Location": locationValue
                         }
                     });
                 }
