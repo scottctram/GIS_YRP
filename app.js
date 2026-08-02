@@ -1,5 +1,3 @@
-// APP JavaScript File - York Region Environmental & Planning Web Map
-
 // ===================================================================================================================================================== //
 // MAP INITIALIZATION                                                                                                                                    //
 // ===================================================================================================================================================== //
@@ -57,7 +55,7 @@ function bindPopupWithBuffer(feature, layer) {
 // STATIC LAYERS (YORK BOUNDARY, POLICE STATIONS & CRIME)                                                                                               //
 // ===================================================================================================================================================== //
 
-// 1. Boundaries Layer (York Region Boundary - Low feature count)
+// 1. Boundaries Layer (York Region Boundary)
 const yorkLayer = L.geoJSON(null, {
     style: { color: "#800020", weight: 2.5, opacity: 1, fillOpacity: 0.05 },
     onEachFeature: bindPopupWithBuffer
@@ -72,20 +70,21 @@ fetch('https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Boundary/MapServer/
     })
     .catch(err => console.error("Error loading York Boundaries GeoJSON:", err));
 
-// 2. Police Stations Layer (Static Load - Always visible across all zoom levels)
-const policeLayer = L.markerClusterGroup();
-policeLayer.currentData = { type: "FeatureCollection", features: [] };
+// 2. Police Stations Layer (Standard Layer Group to DISABLE CLUSTERING)
+const policeLayer = L.layerGroup().addTo(map);
 
 function createPoliceLayer(data) {
     return L.geoJSON(data, {
         pointToLayer: (feature, latlng) => {
-            const iconHtml = `<i class="fa-solid fa-building-shield" style="color: #003399; font-size: 20px; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;"></i>`;
+            const iconHtml = `<div style="display:flex; align-items:center; justify-content:center; width:28px; height:28px; background:#ffffff; border:2px solid #003399; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.4);">
+                <i class="fa-solid fa-building-shield" style="color: #003399; font-size: 15px;"></i>
+            </div>`;
             const policeIcon = L.divIcon({
                 className: 'police-div-icon',
                 html: iconHtml,
-                iconSize: [24, 24],
-                iconAnchor: [12, 12],
-                popupAnchor: [0, -12]
+                iconSize: [28, 28],
+                iconAnchor: [14, 14],
+                popupAnchor: [0, -14]
             });
             return L.marker(latlng, { icon: policeIcon });
         },
@@ -97,20 +96,18 @@ fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Police
     .then(response => response.json())
     .then(data => {
         policeData = data;
-        policeLayer.currentData = data;
+        policeLayer.clearLayers();
         policeLayer.addLayer(createPoliceLayer(data));
-        map.addLayer(policeLayer);
     })
     .catch(err => console.error("Error loading Police Stations GeoJSON:", err));
 
-// 3. Crime Occurrences Layer (Local JSON - Static)
+// 3. Crime Occurrences Layer (Marker Cluster KEPT ACTIVE)
 const crimeLayer = L.markerClusterGroup({
     spiderfyOnMaxZoom: true,
     showCoverageOnHover: false,
     zoomToBoundsOnClick: true,
     spiderfyDistanceMultiplier: 2.5
-});
-crimeLayer.currentData = { type: "FeatureCollection", features: [] };
+}).addTo(map);
 
 function getCrimeColor(type) {
     if (!type) return "#3388ff";
@@ -144,9 +141,8 @@ fetch('yk_crime_rpt22.json')
     .then(response => response.json())
     .then(data => {
         crimeData = data;
-        crimeLayer.currentData = data;
+        crimeLayer.clearLayers();
         crimeLayer.addLayer(createCrimeLayer(data));
-        map.addLayer(crimeLayer);
     })
     .catch(err => console.error("Error loading Crime GeoJSON:", err));
 
@@ -177,7 +173,6 @@ const parcelsLayer = L.geoJSON(null, {
 function fetchViewportData() {
     const currentZoom = map.getZoom();
 
-    // Clear dynamic layers if user zooms out beyond the threshold
     if (currentZoom < MIN_ZOOM_LEVEL) {
         roadsLayer.clearLayers();
         addressesLayer.clearLayers();
@@ -188,7 +183,6 @@ function fetchViewportData() {
         return;
     }
 
-    // Get active map bounding box coordinates (xmin, ymin, xmax, ymax)
     const bbox = map.getBounds().toBBoxString();
 
     // 1. Fetch Roads inside Viewport
@@ -409,7 +403,7 @@ function updateQueryFields() {
         });
     } else {
         const opt = document.createElement('option');
-        opt.innerText = "No fields/Zoom in to load data...";
+        opt.innerText = "No fields loaded...";
         fieldSelect.appendChild(opt);
     }
 }
