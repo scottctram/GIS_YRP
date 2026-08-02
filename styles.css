@@ -35,19 +35,21 @@ body {
 /* --- Legend Styles --- */
 .legend {
     background: white;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.95);
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
     border-radius: 5px;
-    padding: 10px;
-    line-height: 18px;
-    color: #555;
-    min-width: 120px;
+    padding: 10px 12px;
+    line-height: 20px;
+    color: #444;
+    min-width: 140px;
+    font-size: 13px;
 }
 .legend h4 {
-    margin: 0 0 5px;
-    color: #333;
-    font-size: 14px;
+    margin: 0 0 6px;
+    color: #222;
+    font-size: 13px;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 .legend i {
     width: 18px;
@@ -55,7 +57,9 @@ body {
     color: #333;
     float: left;
     margin-right: 8px;
-    opacity: 0.8;
+    opacity: 0.85;
+    text-align: center;
+    line-height: 18px;
 }
 
 /* --- Custom Navigation Controls --- */
@@ -143,7 +147,7 @@ body {
     flex: 1;
 }
 
-/* --- Custom Marker Icons --- */
+/* --- Custom Div Icon Styles --- */
 .crime-div-icon,
 .police-div-icon {
     background: transparent !important;
