@@ -7,6 +7,9 @@ const initialZoom = 10;
 const initialCenter = [44.00, -79.45]; 
 const map = L.map('map', { zoomControl: true }).setView(initialCenter, initialZoom);
 
+// Zoom threshold below which heavy layers (Roads, Addresses, Parcels, Police) will clear
+const MIN_ZOOM_LEVEL = 15; 
+
 // ===================================================================================================================================================== //
 // GLOBAL VARIABLES                                                                                                                                      //
 // ===================================================================================================================================================== //
@@ -14,6 +17,8 @@ let yorkData = { type: "FeatureCollection", features: [] };
 let roadsData = { type: "FeatureCollection", features: [] };
 let addressesData = { type: "FeatureCollection", features: [] };
 let parcelsData = { type: "FeatureCollection", features: [] };
+let policeData = { type: "FeatureCollection", features: [] };
+let crimeData = { type: "FeatureCollection", features: [] };
 
 let bufferResultsData = { type: "FeatureCollection", features: [] };
 let filteredQueryData = null; 
@@ -46,10 +51,10 @@ function bindPopupWithBuffer(feature, layer) {
 }
 
 // ===================================================================================================================================================== //
-// DATA & DATA API CALLS (YORK REGION OPEN DATA)                                                                                                         //
+// STATIC LAYERS (YORK BOUNDARY & CRIME)                                                                                                                  //
 // ===================================================================================================================================================== //
 
-// 1. Boundaries Layer (York Region Boundary)
+// 1. Boundaries Layer (York Region Boundary - Kept Static as it's low feature count)
 const yorkLayer = L.geoJSON(null, {
     style: { color: "#800020", weight: 2.5, opacity: 1, fillOpacity: 0.05 },
     onEachFeature: bindPopupWithBuffer
@@ -64,60 +69,7 @@ fetch('https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Boundary/MapServer/
     })
     .catch(err => console.error("Error loading York Boundaries GeoJSON:", err));
 
-// 2. Roads Layer
-const roadsLayer = L.geoJSON(null, {
-    style: { color: "#555555", weight: 1.5, opacity: 0.8 },
-    onEachFeature: bindPopupWithBuffer
-});
-
-fetch('https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Transportation/MapServer/1/query?outFields=*&where=1%3D1&f=geojson')
-    .then(response => response.json())
-    .then(data => {
-        roadsData = data;
-        roadsLayer.addData(data);
-        map.addLayer(roadsLayer);
-    })
-    .catch(err => console.error("Error loading Roads GeoJSON:", err));
-
-// 3. Addresses Layer (Marker Cluster for Performance)
-const addressesLayer = L.markerClusterGroup({
-    spiderfyOnMaxZoom: true,
-    showCoverageOnHover: false,
-    zoomToBoundsOnClick: true
-});
-addressesLayer.currentData = { type: "FeatureCollection", features: [] };
-
-fetch('https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Location/MapServer/0/query?outFields=*&where=1%3D1&f=geojson')
-    .then(response => response.json())
-    .then(data => {
-        addressesData = data;
-        addressesLayer.currentData = data;
-        const geoJsonData = L.geoJSON(data, {
-            pointToLayer: (feature, latlng) => L.circleMarker(latlng, { radius: 4, fillColor: "#3388ff", color: "#000", weight: 0.5, opacity: 1, fillOpacity: 0.8 }),
-            onEachFeature: bindPopupWithBuffer
-        });
-        addressesLayer.addLayer(geoJsonData);
-        map.addLayer(addressesLayer);
-    })
-    .catch(err => console.error("Error loading Addresses GeoJSON:", err));
-
-// 4. Parcels Layer
-const parcelsLayer = L.geoJSON(null, {
-    style: { color: "#228b22", weight: 1, opacity: 0.6, fillOpacity: 0.2 },
-    onEachFeature: bindPopupWithBuffer
-});
-
-fetch('https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Planning/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson')
-    .then(response => response.json())
-    .then(data => {
-        parcelsData = data;
-        parcelsLayer.addData(data);
-        map.addLayer(parcelsLayer);
-    })
-    .catch(err => console.error("Error loading Parcels GeoJSON:", err));
-
-// 5. Crime Occurrences Layer (Local JSON)
-let crimeData = { type: "FeatureCollection", features: [] };
+// 2. Crime Occurrences Layer (Local JSON - Static)
 const crimeLayer = L.markerClusterGroup({
     spiderfyOnMaxZoom: true,
     showCoverageOnHover: false,
@@ -165,6 +117,117 @@ fetch('yk_crime_rpt22.json')
     .catch(err => console.error("Error loading Crime GeoJSON:", err));
 
 // ===================================================================================================================================================== //
+// DYNAMIC VIEWPORT (BBOX) LAYERS                                                                                                                        //
+// ===================================================================================================================================================== //
+
+// Roads Layer
+const roadsLayer = L.geoJSON(null, {
+    style: { color: "#555555", weight: 2, opacity: 0.8 },
+    onEachFeature: bindPopupWithBuffer
+}).addTo(map);
+
+// Addresses Layer
+const addressesLayer = L.markerClusterGroup({
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    zoomToBoundsOnClick: true
+}).addTo(map);
+
+// Parcels Layer
+const parcelsLayer = L.geoJSON(null, {
+    style: { color: "#228b22", weight: 1, opacity: 0.8, fillOpacity: 0.2 },
+    onEachFeature: bindPopupWithBuffer
+}).addTo(map);
+
+// Police Stations Layer
+const policeLayer = L.markerClusterGroup().addTo(map);
+
+function createPoliceLayer(data) {
+    return L.geoJSON(data, {
+        pointToLayer: (feature, latlng) => {
+            const iconHtml = `<i class="fa-solid fa-building-shield" style="color: #003399; font-size: 20px; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;"></i>`;
+            const policeIcon = L.divIcon({
+                className: 'police-div-icon',
+                html: iconHtml,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12],
+                popupAnchor: [0, -12]
+            });
+            return L.marker(latlng, { icon: policeIcon });
+        },
+        onEachFeature: bindPopupWithBuffer
+    });
+}
+
+// Function to fetch BBOX features dynamically when zoomed in
+function fetchViewportData() {
+    const currentZoom = map.getZoom();
+
+    // Clear dynamic layers if user zooms out beyond the threshold
+    if (currentZoom < MIN_ZOOM_LEVEL) {
+        roadsLayer.clearLayers();
+        addressesLayer.clearLayers();
+        parcelsLayer.clearLayers();
+        policeLayer.clearLayers();
+        roadsData = { type: "FeatureCollection", features: [] };
+        addressesData = { type: "FeatureCollection", features: [] };
+        parcelsData = { type: "FeatureCollection", features: [] };
+        policeData = { type: "FeatureCollection", features: [] };
+        return;
+    }
+
+    // Get active map bounding box coordinates (xmin, ymin, xmax, ymax)
+    const bbox = map.getBounds().toBBoxString();
+
+    // 1. Fetch Roads inside Viewport
+    fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Transportation/MapServer/1/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
+        .then(res => res.json())
+        .then(data => {
+            roadsData = data;
+            roadsLayer.clearLayers();
+            roadsLayer.addData(data);
+        })
+        .catch(err => console.error("Error fetching BBOX Roads:", err));
+
+    // 2. Fetch Addresses inside Viewport
+    fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Location/MapServer/0/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
+        .then(res => res.json())
+        .then(data => {
+            addressesData = data;
+            addressesLayer.clearLayers();
+            const geoJsonData = L.geoJSON(data, {
+                pointToLayer: (feature, latlng) => L.circleMarker(latlng, { radius: 5, fillColor: "#3388ff", color: "#000", weight: 0.5, opacity: 1, fillOpacity: 0.8 }),
+                onEachFeature: bindPopupWithBuffer
+            });
+            addressesLayer.addLayer(geoJsonData);
+        })
+        .catch(err => console.error("Error fetching BBOX Addresses:", err));
+
+    // 3. Fetch Parcels inside Viewport
+    fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Planning/FeatureServer/0/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
+        .then(res => res.json())
+        .then(data => {
+            parcelsData = data;
+            parcelsLayer.clearLayers();
+            parcelsLayer.addData(data);
+        })
+        .catch(err => console.error("Error fetching BBOX Parcels:", err));
+
+    // 4. Fetch Police Stations inside Viewport
+    fetch(`https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/PoliceStation/FeatureServer/0/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
+        .then(res => res.json())
+        .then(data => {
+            policeData = data;
+            policeLayer.clearLayers();
+            policeLayer.addLayer(createPoliceLayer(data));
+        })
+        .catch(err => console.error("Error fetching BBOX Police Stations:", err));
+}
+
+// Trigger query every time user finishes zooming or panning
+map.on('moveend', fetchViewportData);
+
+// ===================================================================================================================================================== //
 // FUNCTIONS - BUFFER, ATTRIBUTE TABLE, SEARCH & QUERY                                                                                                 //
 // ===================================================================================================================================================== //
 
@@ -188,6 +251,7 @@ function initiateBuffer(feature) {
         { name: "Roads", list: roadsData.features },
         { name: "Addresses", list: addressesData.features },
         { name: "Parcels", list: parcelsData.features },
+        { name: "Police Stations", list: policeData.features },
         { name: "Crime Occurrences", list: crimeData.features }
     ];
     
@@ -234,6 +298,7 @@ function getLayerData(id) {
     if (id === 'roads') return roadsData;
     if (id === 'addresses') return addressesData;
     if (id === 'parcels') return parcelsData;
+    if (id === 'police') return policeData;
     if (id === 'crime') return crimeData;
     if (id === 'buffer_results') return bufferResultsData;
     return yorkData;
@@ -280,7 +345,7 @@ function renderTable(data) {
     tbody.innerHTML = '';
 
     if (!data.features || data.features.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5">No features found, please check if layers are filtered or loading.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5">No features loaded in view. Please zoom in closer (Zoom level 15+).</td></tr>';
         return;
     }
 
@@ -311,7 +376,7 @@ function renderTable(data) {
         btn.innerText = "Go";
         btn.onclick = () => {
             const temp = L.geoJSON(feature);
-            if (feature.geometry.type === 'Point') map.flyTo(temp.getBounds().getCenter(), 16);
+            if (feature.geometry.type === 'Point') map.flyTo(temp.getBounds().getCenter(), 18);
             else map.fitBounds(temp.getBounds());
         };
         actionTd.appendChild(btn);
@@ -342,7 +407,7 @@ function updateQueryFields() {
         });
     } else {
         const opt = document.createElement('option');
-        opt.innerText = "No fields/Data loading...";
+        opt.innerText = "No fields/Zoom in to load data...";
         fieldSelect.appendChild(opt);
     }
 }
@@ -363,6 +428,7 @@ function runQuery() {
     else if (layerSelect === 'roads') targetLayer = roadsLayer;
     else if (layerSelect === 'addresses') targetLayer = addressesLayer;
     else if (layerSelect === 'parcels') targetLayer = parcelsLayer;
+    else if (layerSelect === 'police') targetLayer = policeLayer;
     else if (layerSelect === 'crime') targetLayer = crimeLayer;
 
     const filtered = sourceData.features.filter(f => {
@@ -378,9 +444,11 @@ function runQuery() {
     targetLayer.clearLayers();
     if (layerSelect === 'crime') {
         targetLayer.addLayer(createCrimeLayer({ type: "FeatureCollection", features: filtered }));
+    } else if (layerSelect === 'police') {
+        targetLayer.addLayer(createPoliceLayer({ type: "FeatureCollection", features: filtered }));
     } else if (layerSelect === 'addresses') {
         const geoJsonData = L.geoJSON({ type: "FeatureCollection", features: filtered }, {
-            pointToLayer: (feature, latlng) => L.circleMarker(latlng, { radius: 4, fillColor: "#3388ff", color: "#000", weight: 0.5, opacity: 1, fillOpacity: 0.8 }),
+            pointToLayer: (feature, latlng) => L.circleMarker(latlng, { radius: 5, fillColor: "#3388ff", color: "#000", weight: 0.5, opacity: 1, fillOpacity: 0.8 }),
             onEachFeature: bindPopupWithBuffer
         });
         targetLayer.addLayer(geoJsonData);
@@ -397,18 +465,9 @@ function runQuery() {
 }
 
 function resetQuery() {
-    yorkLayer.clearLayers(); yorkLayer.addData(yorkData);
-    roadsLayer.clearLayers(); roadsLayer.addData(roadsData);
-    addressesLayer.clearLayers(); 
-    addressesLayer.addLayer(L.geoJSON(addressesData, {
-        pointToLayer: (f, latlng) => L.circleMarker(latlng, { radius: 4, fillColor: "#3388ff", color: "#000", weight: 0.5, opacity: 1, fillOpacity: 0.8 }),
-        onEachFeature: bindPopupWithBuffer
-    }));
-    parcelsLayer.clearLayers(); parcelsLayer.addData(parcelsData);
-    crimeLayer.clearLayers(); crimeLayer.addLayer(createCrimeLayer(crimeData));
-
     filteredQueryData = null;
     document.getElementById('query-status').innerText = "Reset done.";
+    fetchViewportData();
     if (document.getElementById('attributeTable').style.display === 'flex') switchTableLayer();
 }
 
@@ -423,9 +482,10 @@ function goHome() { map.setView(initialCenter, initialZoom); }
 const baseMaps = { "OpenStreetMap": osmLayer, "Satellite": satelliteLayer, "Dark": darkLayer };
 const overlayMaps = { 
     "York Boundaries": yorkLayer, 
-    "Roads": roadsLayer,
-    "Addresses": addressesLayer,
-    "Parcels": parcelsLayer,
+    "Roads (Zoomed)": roadsLayer,
+    "Addresses (Zoomed)": addressesLayer,
+    "Parcels (Zoomed)": parcelsLayer,
+    "Police Stations (Zoomed)": policeLayer,
     "Crime Occurrences": crimeLayer
 };
 
@@ -459,9 +519,10 @@ legend.onAdd = function () {
     div.innerHTML = `
         <h4>Legend</h4>
         <i style="background: rgba(128, 0, 32, 0.2); border: 2px solid #800020;"></i> York Boundary<br>
-        <i style="background: #555"></i> Roads<br>
-        <i style="background: #3388ff; border-radius: 50%;"></i> Addresses<br>
-        <i style="background: rgba(34, 139, 34, 0.2); border: 1px solid #228b22;"></i> Parcels<br>
+        <i style="background: #555"></i> Roads (Zoom 15+)<br>
+        <i style="background: #3388ff; border-radius: 50%;"></i> Addresses (Zoom 15+)<br>
+        <i style="background: rgba(34, 139, 34, 0.2); border: 1px solid #228b22;"></i> Parcels (Zoom 15+)<br>
+        <i class="fa-solid fa-building-shield" style="color: #003399; font-size: 14px;"></i> Police Stations<br>
         <i class="fa-solid fa-shield-halved" style="color: #d9534f; font-size: 14px;"></i> High-Risk Incident<br>
         <i class="fa-solid fa-shield-halved" style="color: #f0ad4e; font-size: 14px;"></i> Property Incident
     `;
