@@ -1,35 +1,24 @@
-<!-- --- HTML Created by Scott Tram for GIS Analyst Opportunity #8166 --- */ -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>City of Waterloo Environmental Infrastructure Web Map</title>
+    <title>York Region Open Data Web Map</title>
 
-    <!-- Used an Emoji rather than having an Image File: https://css-tricks.com/emoji-as-a-favicon/ -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🗺️</text></svg>" />
 
-    <!-- JS & CSS Styles used: Leaflet 1.4.1 JS, Turf.JS, OSM, https://fontawesome.com -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-     crossorigin=""/>
-
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
-
     <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-    <!-- Most Items are Toggled within App.JS -->
-
     <div id="map"></div>
 
+    <!-- Query Modal -->
     <div id="queryModal" class="modal-backdrop">
         <div class="modal-content">
             <div class="modal-header">
@@ -40,18 +29,17 @@
             <div class="query-row">
                 <label>Target Layer:</label>
                 <select id="q-layer-select">
-                    <option value="points">Points of Interest</option>
-                    <option value="biodiversity">Trees</option>
-                    <option value="water">Water Bodies</option>
-                    <option value="sewer">Sanitary Sewers</option>
-                    <option value="parks_poly">Parks</option>
+                    <option value="york">York Boundary</option>
+                    <option value="roads">Roads</option>
+                    <option value="addresses">Addresses</option>
+                    <option value="parcels">Parcels</option>
+                    <option value="crime">Crime Occurrences</option>
                 </select>
             </div>
 
             <div class="query-row">
                 <label>Field:</label>
-                <select id="q-field">
-                    </select>
+                <select id="q-field"></select>
             </div>
 
             <div class="query-row">
@@ -65,12 +53,11 @@
 
             <div class="query-row">
                 <label>Value:</label>
-                <input type="text" id="q-value" placeholder="e.g. 17150 Yonge Street">
+                <input type="text" id="q-value" placeholder="e.g. Yonge Street">
             </div>
 
             <div class="query-actions">
                 <button class="btn-primary" onclick="runQuery()">Run Query</button>
-                <button class="btn-secondary" onclick="clearQueryForm()" style="background:#e2e6ea;">Clear Inputs</button>
                 <button class="btn-secondary" onclick="resetQuery()">Reset Map</button>
             </div>
             
@@ -78,6 +65,7 @@
         </div>
     </div>
 
+    <!-- Info Modal -->
     <div id="infoModal" class="modal-backdrop">
         <div class="modal-content" style="max-width: 400px;">
             <div class="modal-header">
@@ -85,19 +73,14 @@
                 <span class="close-btn" onclick="toggleInfoModal()">&times;</span>
             </div>
             <div style="line-height: 1.6; color: #444; font-size: 14px;">
-                <p>Welcome to the <strong>City of Waterloo Environmental Infrastructure Web Map</strong>!</p>
-                <p>This interactive map application features:</p>
+                <p>Welcome to the <strong>York Region Interactive Web Map</strong>!</p>
+                <p>This web map features GIS layers powered directly by the <b>York Region Open Data API</b>:</p>
                 <ul style="padding-left: 20px; margin: 10px 0;">
-                    <li><strong>Layers:</strong> Points, Trees, Water, Sewers, and Parks.</li>
-                    <li><strong>Buffer Tool:</strong> Click any feature popup to buffer it and find nearby items.</li>
-                    <li><strong>Search & Query:</strong> Find locations and filter attributes.</li>
+                    <li><strong>Boundaries:</strong> Regional Limits</li>
+                    <li><strong>Transportation:</strong> Roads</li>
+                    <li><strong>Locations:</strong> Address Points</li>
+                    <li><strong>Planning:</strong> Property Parcels</li>
                 </ul>
-                <p>This web map was created using data provided under the <b>Waterloo Open Data User Licence</b>. 
-                    All use of the data follows the terms of the licence, including proper handling, non-misrepresentation, and compliance with all applicable laws. 
-                    The data is provided as is by the City of Waterloo, and no endorsement by the City is implied.</p>
-                <p style="font-size: 12px; color: #888; margin-top: 15px;">
-                    Built with Leaflet.js 1.4.1, Turf.js & OpenStreetMap.
-                </p>
             </div>
             <div class="query-actions">
                 <button class="btn-primary" onclick="toggleInfoModal()">Close</button>
@@ -105,17 +88,18 @@
         </div>
     </div>
 
+    <!-- Attribute Table -->
     <div id="attributeTable" class="attribute-table-container">
         <div class="table-header-control">
             <div class="table-controls">
                 <span><i class="fa-solid fa-table"></i> Data:</span>
                 
                 <select id="table-layer-select" class="table-select" onchange="switchTableLayer()">
-                    <option value="points">Points of Interest</option>
-                    <option value="biodiversity">Trees</option>
-                    <option value="water">Water Bodies</option>
-                    <option value="sewer">Sanitary Sewers</option>
-                    <option value="parks_poly">Parks</option>
+                    <option value="york">York Boundary</option>
+                    <option value="roads">Roads</option>
+                    <option value="addresses">Addresses</option>
+                    <option value="parcels">Parcels</option>
+                    <option value="crime">Crime Occurrences</option>
                     <option value="buffer_results">Buffer Results</option>
                 </select>
 
@@ -132,18 +116,11 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-     crossorigin=""></script>
-
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://unpkg.com/leaflet.pattern/dist/leaflet.pattern.js"></script>
-
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
-
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
-
     <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
-
     <script src="app.js"></script>
 
 </body>
