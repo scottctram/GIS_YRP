@@ -29,8 +29,11 @@ const bufferLayerGroup = L.layerGroup().addTo(map);
 // Global Legend Container Reference
 let legendContainerDiv = null;
 
-// Operational Mode Variables
+// Heatmap Layers (Independent Instances)
 let crimeHeatmapLayer = null;
+let roadSafetyHeatmapLayer = null;
+
+// Operational Mode Variables
 let currentShiftFilter = "ALL"; // "ALL", "DAY", "NIGHT"
 let currentPersonaMode = "ANALYST"; // "ANALYST", "OFFICER"
 
@@ -210,41 +213,68 @@ fetch('yk_crime_rpt22.json')
     })
     .catch(err => console.error("Error loading Crime GeoJSON:", err));
 
-// 4. Road Safety / Traffic Incident Layer (New API Integration)
+// 4. Road Safety Layer (Collision Warning Points + Separate Heatmap Generation)
 const roadSafetyLayer = L.layerGroup().addTo(map);
 
 function createRoadSafetyLayer(data) {
-    return L.geoJSON(data, {
-        pointToLayer: (feature, latlng) => {
-            const warningSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#d9534f" width="14px" height="14px">
-                <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
-            </svg>`;
+    const layerGroup = L.layerGroup();
+    if (!data || !data.features) return layerGroup;
 
-            const iconHtml = `<div style="
-                display: flex; 
-                align-items: center; 
-                justify-content: center; 
-                width: 26px; 
-                height: 26px; 
-                background: #fff3cd; 
-                border: 2px solid #ffc107; 
-                border-radius: 50%; 
-                box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
-                ${warningSvg}
-            </div>`;
+    const heatPoints = [];
 
-            const warningIcon = L.divIcon({
-                className: 'road-safety-div-icon',
-                html: iconHtml,
-                iconSize: [26, 26],
-                iconAnchor: [13, 13],
-                popupAnchor: [0, -13]
-            });
+    data.features.forEach(feature => {
+        if (feature.geometry && feature.geometry.coordinates) {
+            const lng = parseFloat(feature.geometry.coordinates[0]);
+            const lat = parseFloat(feature.geometry.coordinates[1]);
 
-            return L.marker(latlng, { icon: warningIcon });
-        },
-        onEachFeature: bindPopupWithBuffer
+            if (!isNaN(lat) && !isNaN(lng)) {
+                // Add to Road Safety Heatmap array
+                heatPoints.push([lat, lng, 0.7]);
+
+                const warningSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#d9534f" width="14px" height="14px">
+                    <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                </svg>`;
+
+                const iconHtml = `<div style="
+                    display: flex; 
+                    align-items: center; 
+                    justify-content: center; 
+                    width: 26px; 
+                    height: 26px; 
+                    background: #fff3cd; 
+                    border: 2px solid #ffc107; 
+                    border-radius: 50%; 
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
+                    ${warningSvg}
+                </div>`;
+
+                const warningIcon = L.divIcon({
+                    className: 'road-safety-div-icon',
+                    html: iconHtml,
+                    iconSize: [26, 26],
+                    iconAnchor: [13, 13],
+                    popupAnchor: [0, -13]
+                });
+
+                const marker = L.marker([lat, lng], { icon: warningIcon });
+                bindPopupWithBuffer(feature, marker);
+                layerGroup.addLayer(marker);
+            }
+        }
     });
+
+    // Initialize Road Safety Heatmap Layer (Yellow -> Orange -> Red)
+    if (typeof L.heatLayer === 'function') {
+        if (roadSafetyHeatmapLayer) map.removeLayer(roadSafetyHeatmapLayer);
+        roadSafetyHeatmapLayer = L.heatLayer(heatPoints, { 
+            radius: 25, 
+            blur: 15, 
+            maxZoom: 15,
+            gradient: { 0.4: '#ffeb3b', 0.7: '#ff9800', 1.0: '#f44336' }
+        });
+    }
+
+    return layerGroup;
 }
 
 fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Road_Safety/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson')
@@ -324,7 +354,7 @@ map.on('overlayadd overlayremove', function(e) {
 });
 
 // ===================================================================================================================================================== //
-// OPERATIONAL SHIFT & PERSONA CONTROLS                                                                                                                 //
+// OPERATIONAL SHIFT & INDEPENDENT HEATMAP CONTROLS                                                                                                     //
 // ===================================================================================================================================================== //
 
 function setPersonaMode(mode) {
@@ -337,7 +367,9 @@ function setPersonaMode(mode) {
         if (analystBtn) analystBtn.classList.remove('active');
         if (officerBtn) officerBtn.classList.add('active');
         if (shiftBar) shiftBar.style.display = 'flex';
+        // Auto-disable active heatmaps in Officer mode
         if (crimeHeatmapLayer && map.hasLayer(crimeHeatmapLayer)) map.removeLayer(crimeHeatmapLayer);
+        if (roadSafetyHeatmapLayer && map.hasLayer(roadSafetyHeatmapLayer)) map.removeLayer(roadSafetyHeatmapLayer);
         if (!map.hasLayer(crimeLayer)) map.addLayer(crimeLayer);
     } else {
         if (officerBtn) officerBtn.classList.remove('active');
@@ -357,12 +389,23 @@ function setShiftFilter(shift) {
     applyCombinedFilters();
 }
 
-function toggleHeatmap() {
-    if (!crimeHeatmapLayer) return alert("Heatmap initializing...");
+// Independent Heatmap Toggle 1: Crime Density
+function toggleCrimeHeatmap() {
+    if (!crimeHeatmapLayer) return alert("Crime Heatmap initializing...");
     if (map.hasLayer(crimeHeatmapLayer)) {
         map.removeLayer(crimeHeatmapLayer);
     } else {
         map.addLayer(crimeHeatmapLayer);
+    }
+}
+
+// Independent Heatmap Toggle 2: Road Safety Density
+function toggleTrafficHeatmap() {
+    if (!roadSafetyHeatmapLayer) return alert("Traffic Heatmap initializing...");
+    if (map.hasLayer(roadSafetyHeatmapLayer)) {
+        map.removeLayer(roadSafetyHeatmapLayer);
+    } else {
+        map.addLayer(roadSafetyHeatmapLayer);
     }
 }
 
@@ -795,7 +838,7 @@ L.control.scale().addTo(map);
 L.Control.geocoder({ defaultMarkGeocode: true, collapsed: true, placeholder: 'Search location...' }).addTo(map);
 L.control.layers(baseMaps, overlayMaps).addTo(map);
 
-// Navigation Bar Controls
+// Navigation Bar Controls (Includes Separate Crime vs. Traffic Heatmap Controls)
 const navControl = L.Control.extend({
     options: { position: 'topleft' },
     onAdd: function() {
@@ -810,7 +853,8 @@ const navControl = L.Control.extend({
         createBtn('fa-solid fa-house', 'Home', goHome);
         createBtn('fa-solid fa-filter', 'Query Builder', toggleQueryModal);
         createBtn('fa-solid fa-mask', 'Crime Filter', toggleCrimeFilterModal);
-        createBtn('fa-solid fa-fire', 'Toggle Heatmap', toggleHeatmap);
+        createBtn('fa-solid fa-fire', 'Toggle Crime Heatmap', toggleCrimeHeatmap);
+        createBtn('fa-solid fa-triangle-exclamation', 'Toggle Traffic Heatmap', toggleTrafficHeatmap);
         createBtn('fa-solid fa-table-list', 'Table', toggleAttributeTable);
         return c;
     }
