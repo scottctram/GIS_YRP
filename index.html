@@ -53,16 +53,15 @@
             
             <div class="query-row">
                 <label>Target Layer:</label>
-                 <!-- In Query Builder Modal -->
-<select id="q-layer-select">
-    <option value="york">York Boundary</option>
-    <option value="police">Police Stations</option>
-    <option value="crime">Crime Occurrences</option>
-    <option value="road_safety">Road Safety</option>
-    <option value="roads">Roads</option>
-    <option value="addresses">Addresses</option>
-    <option value="parcels">Parcels</option>
-</select>
+                <select id="q-layer-select">
+                    <option value="york">York Boundary</option>
+                    <option value="police">Police Stations</option>
+                    <option value="crime">Crime Occurrences</option>
+                    <option value="road_safety">Road Safety</option>
+                    <option value="roads">Roads</option>
+                    <option value="addresses">Addresses</option>
+                    <option value="parcels">Parcels</option>
+                </select>
             </div>
 
             <div class="query-row">
@@ -78,9 +77,6 @@
                     <option value="starts">Starts With</option>
                 </select>
             </div>
-
-
-            
 
             <div class="query-row">
                 <label>Value:</label>
@@ -142,8 +138,8 @@
                 <p>Welcome to the <strong>York Regional Police Public Safety & Intelligence Web Map</strong>!</p>
                 <p>Designed to support <b>District Crime Analysts</b> and <b>Front-Line Officers</b>:</p>
                 <ul style="padding-left: 20px; margin: 10px 0;">
-                    <li><strong>Analyst Mode:</strong> Density Heatmaps, Query Builder & Spatial Buffers.</li>
-                    <li><strong>Officer Mode:</strong> Day/Night Shift Filters & Patrol Briefing Cards.</li>
+                    <li><strong>Analyst Mode:</strong> Density Heatmaps (Crime & Traffic), Query Builder & Spatial Buffers.</li>
+                    <li><strong>Officer Mode:</strong> Day/Night Shift Filters & Viewport Patrol Briefing Cards.</li>
                 </ul>
             </div>
             <div class="query-actions">
@@ -152,29 +148,22 @@
         </div>
     </div>
 
-
-    
     <!-- Attribute Table -->
     <div id="attributeTable" class="attribute-table-container">
         <div class="table-header-control">
             <div class="table-controls">
                 <span><i class="fa-solid fa-table"></i> Data:</span>
                 
-<!-- In Attribute Table Controls -->
-<select id="table-layer-select" class="table-select" onchange="switchTableLayer()">
-    <option value="york">York Boundary</option>
-    <option value="police">Police Stations</option>
-    <option value="crime">Crime Occurrences</option>
-    <option value="road_safety">Road Safety</option>
-    <option value="roads">Roads</option>
-    <option value="addresses">Addresses</option>
-    <option value="parcels">Parcels</option>
-    <option value="buffer_results">Buffer Results</option>
-</select>
-
-
-
-
+                <select id="table-layer-select" class="table-select" onchange="switchTableLayer()">
+                    <option value="york">York Boundary</option>
+                    <option value="police">Police Stations</option>
+                    <option value="crime">Crime Occurrences</option>
+                    <option value="road_safety">Road Safety</option>
+                    <option value="roads">Roads</option>
+                    <option value="addresses">Addresses</option>
+                    <option value="parcels">Parcels</option>
+                    <option value="buffer_results">Buffer Results</option>
+                </select>
 
                 <input type="text" id="table-search" placeholder="Search table..." class="table-search-input">
             </div>
