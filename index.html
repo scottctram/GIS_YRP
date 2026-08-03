@@ -53,14 +53,16 @@
             
             <div class="query-row">
                 <label>Target Layer:</label>
-                <select id="q-layer-select">
-                    <option value="york">York Boundary</option>
-                    <option value="police">Police Stations</option>
-                    <option value="crime">Crime Occurrences</option>
-                    <option value="roads">Roads</option>
-                    <option value="addresses">Addresses</option>
-                    <option value="parcels">Parcels</option>
-                </select>
+                 <!-- In Query Builder Modal -->
+<select id="q-layer-select">
+    <option value="york">York Boundary</option>
+    <option value="police">Police Stations</option>
+    <option value="crime">Crime Occurrences</option>
+    <option value="road_safety">Road Safety</option>
+    <option value="roads">Roads</option>
+    <option value="addresses">Addresses</option>
+    <option value="parcels">Parcels</option>
+</select>
             </div>
 
             <div class="query-row">
@@ -76,6 +78,9 @@
                     <option value="starts">Starts With</option>
                 </select>
             </div>
+
+
+            
 
             <div class="query-row">
                 <label>Value:</label>
@@ -147,21 +152,29 @@
         </div>
     </div>
 
+
+    
     <!-- Attribute Table -->
     <div id="attributeTable" class="attribute-table-container">
         <div class="table-header-control">
             <div class="table-controls">
                 <span><i class="fa-solid fa-table"></i> Data:</span>
                 
-                <select id="table-layer-select" class="table-select" onchange="switchTableLayer()">
-                    <option value="york">York Boundary</option>
-                    <option value="police">Police Stations</option>
-                    <option value="crime">Crime Occurrences</option>
-                    <option value="roads">Roads</option>
-                    <option value="addresses">Addresses</option>
-                    <option value="parcels">Parcels</option>
-                    <option value="buffer_results">Buffer Results</option>
-                </select>
+<!-- In Attribute Table Controls -->
+<select id="table-layer-select" class="table-select" onchange="switchTableLayer()">
+    <option value="york">York Boundary</option>
+    <option value="police">Police Stations</option>
+    <option value="crime">Crime Occurrences</option>
+    <option value="road_safety">Road Safety</option>
+    <option value="roads">Roads</option>
+    <option value="addresses">Addresses</option>
+    <option value="parcels">Parcels</option>
+    <option value="buffer_results">Buffer Results</option>
+</select>
+
+
+
+
 
                 <input type="text" id="table-search" placeholder="Search table..." class="table-search-input">
             </div>
