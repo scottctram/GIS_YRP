@@ -55,7 +55,9 @@
                 <label>Target Layer:</label>
                 <select id="q-layer-select">
                     <option value="york">York Boundary</option>
+                    <option value="districts">YRP Districts</option>
                     <option value="police">Police Stations</option>
+                    <option value="hospitals">Hospitals</option>
                     <option value="crime">Crime Occurrences</option>
                     <option value="road_safety">Road Safety</option>
                     <option value="roads">Roads</option>
@@ -156,7 +158,9 @@
                 
                 <select id="table-layer-select" class="table-select" onchange="switchTableLayer()">
                     <option value="york">York Boundary</option>
+                    <option value="districts">YRP Districts</option>
                     <option value="police">Police Stations</option>
+                    <option value="hospitals">Hospitals</option>
                     <option value="crime">Crime Occurrences</option>
                     <option value="road_safety">Road Safety</option>
                     <option value="roads">Roads</option>
@@ -185,6 +189,9 @@
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
     <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    
+    <!-- YRP District Boundaries Local Data Script -->
+    <script src="districts.js"></script>
     <script src="app.js"></script>
 
 </body>
