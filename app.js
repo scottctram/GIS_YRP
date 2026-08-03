@@ -1,4 +1,4 @@
-// APP JavaScript File - York Regional Police Public Safety Web Map
+// APP JavaScript File - York Regional Police Public Safety & Intelligence Web Map
 
 // ===================================================================================================================================================== //
 // MAP INITIALIZATION                                                                                                                                    //
@@ -16,6 +16,7 @@ const MIN_ZOOM_LEVEL = 15;
 let yorkData = { type: "FeatureCollection", features: [] };
 let policeData = { type: "FeatureCollection", features: [] };
 let crimeData = { type: "FeatureCollection", features: [] };
+let roadSafetyData = { type: "FeatureCollection", features: [] };
 
 let roadsData = { type: "FeatureCollection", features: [] };
 let addressesData = { type: "FeatureCollection", features: [] };
@@ -25,7 +26,10 @@ let bufferResultsData = { type: "FeatureCollection", features: [] };
 let filteredQueryData = null; 
 const bufferLayerGroup = L.layerGroup().addTo(map);
 
-// Heatmap & Operational Layers
+// Global Legend Container Reference
+let legendContainerDiv = null;
+
+// Operational Mode Variables
 let crimeHeatmapLayer = null;
 let currentShiftFilter = "ALL"; // "ALL", "DAY", "NIGHT"
 let currentPersonaMode = "ANALYST"; // "ANALYST", "OFFICER"
@@ -57,7 +61,7 @@ function bindPopupWithBuffer(feature, layer) {
 }
 
 // ===================================================================================================================================================== //
-// STATIC LAYERS (YORK BOUNDARY, POLICE STATIONS & CRIME)                                                                                               //
+// STATIC LAYERS (YORK BOUNDARY, POLICE STATIONS, CRIME & ROAD SAFETY)                                                                                   //
 // ===================================================================================================================================================== //
 
 // 1. Boundaries Layer
@@ -76,25 +80,29 @@ fetch('https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Boundary/MapServer/
     })
     .catch(err => console.error("Error loading York Boundaries GeoJSON:", err));
 
-// 2. Police Stations Layer
+// 2. Police Stations Layer (Solid Blue Badge with SVG Icon)
 const policeLayer = L.layerGroup().addTo(map);
 
 function createPoliceLayer(data) {
     return L.geoJSON(data, {
         pointToLayer: (feature, latlng) => {
+            const svgBadge = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" width="18px" height="18px">
+                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-5.45 9-12V5l-9-4zm-1 6h2v2h-2V7zm0 4h2v6h-2v-6z"/>
+            </svg>`;
+
             const iconHtml = `<div style="
                 display: flex; 
                 align-items: center; 
                 justify-content: center; 
                 width: 32px; 
                 height: 32px; 
-                background: #003399; 
+                background: #002b80; 
                 border: 2px solid #ffffff; 
                 border-radius: 50%; 
-                box-shadow: 0 3px 8px rgba(0,0,0,0.5);
-                color: #ffffff;">
-                <i class="fa-solid fa-shield-halved" style="font-size: 16px; line-height: 1;"></i>
+                box-shadow: 0 3px 6px rgba(0,0,0,0.4);">
+                ${svgBadge}
             </div>`;
+
             const policeIcon = L.divIcon({
                 className: 'police-div-icon',
                 html: iconHtml,
@@ -118,7 +126,7 @@ fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Police
     })
     .catch(err => console.error("Error loading Police Stations GeoJSON:", err));
 
-// 3. Crime Occurrences Layer & Category Helper
+// 3. Crime Occurrences Layer
 const crimeLayer = L.layerGroup().addTo(map);
 
 function getCrimeCategory(type) {
@@ -135,7 +143,7 @@ function getCrimeColor(type) {
     if (cat === "HIGH_RISK") return "#d9534f";    // Red
     if (cat === "PROPERTY") return "#f0ad4e";     // Orange
     if (cat === "BE_MISCHIEF") return "#5bc0de";  // Light Blue
-    return "#3388ff";                            // Dark Blue (Default / Other)
+    return "#3388ff";                            // Dark Blue
 }
 
 function isHighRiskCrime(type) {
@@ -201,6 +209,54 @@ fetch('yk_crime_rpt22.json')
         updateLegend();
     })
     .catch(err => console.error("Error loading Crime GeoJSON:", err));
+
+// 4. Road Safety / Traffic Incident Layer (New API Integration)
+const roadSafetyLayer = L.layerGroup().addTo(map);
+
+function createRoadSafetyLayer(data) {
+    return L.geoJSON(data, {
+        pointToLayer: (feature, latlng) => {
+            const warningSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#d9534f" width="14px" height="14px">
+                <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+            </svg>`;
+
+            const iconHtml = `<div style="
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                width: 26px; 
+                height: 26px; 
+                background: #fff3cd; 
+                border: 2px solid #ffc107; 
+                border-radius: 50%; 
+                box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
+                ${warningSvg}
+            </div>`;
+
+            const warningIcon = L.divIcon({
+                className: 'road-safety-div-icon',
+                html: iconHtml,
+                iconSize: [26, 26],
+                iconAnchor: [13, 13],
+                popupAnchor: [0, -13]
+            });
+
+            return L.marker(latlng, { icon: warningIcon });
+        },
+        onEachFeature: bindPopupWithBuffer
+    });
+}
+
+fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Road_Safety/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson')
+    .then(response => response.json())
+    .then(data => {
+        roadSafetyData = data;
+        roadSafetyLayer.clearLayers();
+        roadSafetyLayer.addLayer(createRoadSafetyLayer(data));
+        updateOperationalBriefingCard();
+        updateLegend();
+    })
+    .catch(err => console.error("Error loading Road Safety GeoJSON:", err));
 
 // ===================================================================================================================================================== //
 // DYNAMIC VIEWPORT (BBOX) LAYERS (ROADS, ADDRESSES, PARCELS)                                                                                           //
@@ -322,13 +378,9 @@ function applyCombinedFilters() {
         const offenseType = props.cr_ucr_tra || props.CATEGORY || "";
         const riskCategory = getCrimeCategory(offenseType);
 
-        // 1. Risk Category Filter
         const riskMatch = (selectedRiskCategory === 'ALL') || (riskCategory === selectedRiskCategory);
-
-        // 2. Specific Offense Type Filter
         const typeMatch = (selectedCrimeType === 'ALL') || (offenseType === selectedCrimeType);
 
-        // 3. Shift Filter (07:00 to 19:00 is DAY shift)
         let shiftMatch = true;
         if (currentShiftFilter !== 'ALL') {
             const rawTime = parseInt(props.occ_time, 10);
@@ -351,6 +403,7 @@ function applyCombinedFilters() {
     updateOperationalBriefingCard();
 }
 
+// Operational Briefing Card (Includes Road Safety Collisions)
 function updateOperationalBriefingCard() {
     const briefingDiv = document.getElementById('operational-briefing-content');
     if (!briefingDiv || !crimeData.features) return;
@@ -358,6 +411,7 @@ function updateOperationalBriefingCard() {
     const bounds = map.getBounds();
     let totalInView = 0;
     let highRiskCount = 0;
+    let trafficCollisionsInView = 0;
     const categoryCounts = {};
 
     crimeData.features.forEach(f => {
@@ -378,12 +432,25 @@ function updateOperationalBriefingCard() {
         }
     });
 
+    if (roadSafetyData && roadSafetyData.features) {
+        roadSafetyData.features.forEach(f => {
+            if (f.geometry && f.geometry.coordinates) {
+                const lng = parseFloat(f.geometry.coordinates[0]);
+                const lat = parseFloat(f.geometry.coordinates[1]);
+                if (!isNaN(lat) && !isNaN(lng) && bounds.contains([lat, lng])) {
+                    trafficCollisionsInView++;
+                }
+            }
+        });
+    }
+
     const topOffense = Object.keys(categoryCounts).sort((a, b) => categoryCounts[b] - categoryCounts[a])[0] || "None";
 
     briefingDiv.innerHTML = `
-        <div class="briefing-stat-row"><span>Incidents in View:</span> <b>${totalInView}</b></div>
+        <div class="briefing-stat-row"><span>Crimes in View:</span> <b>${totalInView}</b></div>
         <div class="briefing-stat-row"><span>High-Risk Hazards:</span> <b style="color:#d9534f;">${highRiskCount}</b></div>
-        <div class="briefing-stat-row"><span>Primary Offense:</span> <b>${topOffense.substring(0, 22)}</b></div>
+        <div class="briefing-stat-row"><span>Traffic Hazards:</span> <b style="color:#f0ad4e;">${trafficCollisionsInView}</b></div>
+        <div class="briefing-stat-row"><span>Primary Offense:</span> <b>${topOffense.substring(0, 20)}</b></div>
         <div class="briefing-stat-row"><span>Active Shift:</span> <b>${currentShiftFilter}</b></div>
     `;
 }
@@ -454,7 +521,8 @@ function initiateBuffer(feature) {
         { name: "Addresses", list: addressesData.features, aliasKey: "FULL_ADDRESS", locKey: "MUNICIPALITY" },
         { name: "Parcels", list: parcelsData.features, aliasKey: "ARN", locKey: "LOCATION" },
         { name: "Police Stations", list: policeData.features, aliasKey: "NAME", locKey: "ADDRESS" },
-        { name: "Crime Occurrences", list: crimeData.features, aliasKey: "cr_ucr_tra", locKey: "cr_loc" }
+        { name: "Crime Occurrences", list: crimeData.features, aliasKey: "cr_ucr_tra", locKey: "cr_loc" },
+        { name: "Road Safety", list: roadSafetyData.features, aliasKey: "ACCIDENT_LOCATION", locKey: "MUNICIPALITY" }
     ];
     
     const foundFeatures = [];
@@ -525,6 +593,7 @@ function getLayerData(id) {
     if (id === 'parcels') return parcelsData;
     if (id === 'police') return policeData;
     if (id === 'crime') return crimeData;
+    if (id === 'road_safety') return roadSafetyData;
     if (id === 'buffer_results') return bufferResultsData;
     return yorkData;
 }
@@ -655,6 +724,7 @@ function runQuery() {
     else if (layerSelect === 'parcels') targetLayer = parcelsLayer;
     else if (layerSelect === 'police') targetLayer = policeLayer;
     else if (layerSelect === 'crime') targetLayer = crimeLayer;
+    else if (layerSelect === 'road_safety') targetLayer = roadSafetyLayer;
 
     const filtered = sourceData.features.filter(f => {
         const propVal = (f.properties[fieldInput] || "").toString().toLowerCase();
@@ -671,6 +741,8 @@ function runQuery() {
         targetLayer.addLayer(createCrimeLayer({ type: "FeatureCollection", features: filtered }));
     } else if (layerSelect === 'police') {
         targetLayer.addLayer(createPoliceLayer({ type: "FeatureCollection", features: filtered }));
+    } else if (layerSelect === 'road_safety') {
+        targetLayer.addLayer(createRoadSafetyLayer({ type: "FeatureCollection", features: filtered }));
     } else if (layerSelect === 'addresses') {
         const geoJsonData = L.geoJSON({ type: "FeatureCollection", features: filtered }, {
             pointToLayer: (feature, latlng) => L.circleMarker(latlng, { radius: 5, fillColor: "#3388ff", color: "#000", weight: 0.5, opacity: 1, fillOpacity: 0.8 }),
@@ -694,6 +766,7 @@ function resetQuery() {
     document.getElementById('query-status').innerText = "Reset done.";
     policeLayer.clearLayers(); policeLayer.addLayer(createPoliceLayer(policeData));
     crimeLayer.clearLayers(); crimeLayer.addLayer(createCrimeLayer(crimeData));
+    roadSafetyLayer.clearLayers(); roadSafetyLayer.addLayer(createRoadSafetyLayer(roadSafetyData));
     yorkLayer.clearLayers(); yorkLayer.addData(yorkData);
     fetchViewportData();
     if (document.getElementById('attributeTable').style.display === 'flex') switchTableLayer();
@@ -712,6 +785,7 @@ const overlayMaps = {
     "York Boundaries": yorkLayer, 
     "Police Stations": policeLayer,
     "Crime Occurrences": crimeLayer,
+    "Road Safety": roadSafetyLayer,
     "Roads (Zoomed)": roadsLayer,
     "Addresses (Zoomed)": addressesLayer,
     "Parcels (Zoomed)": parcelsLayer
@@ -747,7 +821,6 @@ map.addControl(new navControl());
 // DYNAMIC LEGEND CONTROL                                                                                                                                //
 // ===================================================================================================================================================== //
 const legend = L.control({ position: 'bottomleft' });
-let legendContainerDiv = null;
 
 legend.onAdd = function () {
     legendContainerDiv = L.DomUtil.create('div', 'info legend');
@@ -768,18 +841,12 @@ function updateLegend() {
             </div>`;
     }
 
-if (map.hasLayer(policeLayer)) {
-    itemsHtml += `
-        <div class="legend-row">
-            <i class="legend-symbol" style="
-                background: #003399; 
-                border: 1px solid #fff; 
-                border-radius: 50%; 
-                width: 14px; 
-                height: 14px; 
-                box-shadow: 0 0 2px rgba(0,0,0,0.4);"></i> YRP Police Station
-        </div>`;
-}
+    if (map.hasLayer(policeLayer)) {
+        itemsHtml += `
+            <div class="legend-row">
+                <i class="legend-symbol" style="background: #002b80; border: 1px solid #fff; border-radius: 50%; width: 14px; height: 14px;"></i> Police Stations
+            </div>`;
+    }
 
     if (map.hasLayer(crimeLayer)) {
         itemsHtml += `
@@ -794,6 +861,13 @@ if (map.hasLayer(policeLayer)) {
             </div>
             <div class="legend-row">
                 <i class="legend-symbol" style="background: #3388ff; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> Other Incident
+            </div>`;
+    }
+
+    if (map.hasLayer(roadSafetyLayer)) {
+        itemsHtml += `
+            <div class="legend-row">
+                <i class="legend-symbol" style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 50%; width: 12px; height: 12px;"></i> Road Safety / Collision
             </div>`;
     }
 
