@@ -282,13 +282,14 @@ fetch('yk_crime_rpt22.json')
 // 4. Road Safety Layer (Point Markers rendered at Zoom Level 13+ / ~2km View)
 const roadSafetyLayer = L.layerGroup().addTo(map);
 
-function renderRoadSafetyMarkers() {
+function renderRoadSafetyMarkers(dataToRender) {
     roadSafetyLayer.clearLayers();
-    if (!roadSafetyData || !roadSafetyData.features) return;
+    const sourceFeatures = (dataToRender && dataToRender.features) ? dataToRender.features : (roadSafetyData ? roadSafetyData.features : []);
+    if (!sourceFeatures) return;
 
     const heatPoints = [];
 
-    roadSafetyData.features.forEach(feature => {
+    sourceFeatures.forEach(feature => {
         if (feature.geometry && feature.geometry.coordinates) {
             const lng = parseFloat(feature.geometry.coordinates[0]);
             const lat = parseFloat(feature.geometry.coordinates[1]);
@@ -468,7 +469,8 @@ function applyCombinedFilters() {
     const selectedCrimeType = document.getElementById('crime-type-select') ? document.getElementById('crime-type-select').value : 'ALL';
     const statusDiv = document.getElementById('crime-filter-status');
 
-    const filtered = crimeData.features.filter(f => {
+    // 1. Filter Crime Occurrences Layer
+    const filteredCrimes = crimeData.features.filter(f => {
         const props = f.properties || {};
         const offenseType = props.cr_ucr_tra || props.CATEGORY || "";
         const riskCategory = getCrimeCategory(offenseType);
@@ -489,10 +491,27 @@ function applyCombinedFilters() {
     });
 
     crimeLayer.clearLayers();
-    crimeLayer.addLayer(createCrimeLayer({ type: "FeatureCollection", features: filtered }));
-    
+    crimeLayer.addLayer(createCrimeLayer({ type: "FeatureCollection", features: filteredCrimes }));
+
+    // 2. Filter Road Safety Incidents by Active Shift (using time_est field)
+    let filteredTraffic = [];
+    if (roadSafetyData && roadSafetyData.features) {
+        filteredTraffic = roadSafetyData.features.filter(f => {
+            if (currentShiftFilter === 'ALL') return true;
+            const props = f.properties || {};
+            const rawTime = parseInt(props.time_est || props.ACCIDENT_TIME || props.TIME, 10);
+            if (!isNaN(rawTime)) {
+                const isDay = (rawTime >= 700 && rawTime < 1900);
+                return (currentShiftFilter === 'DAY') ? isDay : !isDay;
+            }
+            return true;
+        });
+    }
+
+    renderRoadSafetyMarkers({ type: "FeatureCollection", features: filteredTraffic });
+
     if (statusDiv) {
-        statusDiv.innerText = `Displaying ${filtered.length} of ${crimeData.features.length} incidents.`;
+        statusDiv.innerText = `Displaying ${filteredCrimes.length} crimes & ${filteredTraffic.length} traffic incidents.`;
     }
 
     updateOperationalBriefingCard();
@@ -618,7 +637,7 @@ function initiateBuffer(feature) {
         { name: "Police Stations", list: policeData.features, aliasKey: "NAME", locKey: "ADDRESS" },
         { name: "Hospitals", list: hospitalData.features, aliasKey: "NAME", locKey: "ADDRESS" },
         { name: "Crime Occurrences", list: crimeData.features, aliasKey: "cr_ucr_tra", locKey: "cr_loc" },
-        { name: "Road Safety", list: roadSafetyData.features, aliasKey: "ACCIDENT_LOCATION", locKey: "MUNICIPALITY" }
+        { name: "Road Safety", list: roadSafetyData.features, aliasKey: "CollisionDetail", locKey: "LocationCode" }
     ];
     
     const foundFeatures = [];
@@ -633,6 +652,8 @@ function initiateBuffer(feature) {
                     const idValue = keys.length > 0 ? props[keys[0]] : "Unknown";
 
                     const aliasValue = props[source.aliasKey] 
+                        || props.CollisionDetail
+                        || props.ACCIDENT_LOCATION
                         || props.NAME 
                         || props.STREET_NAME 
                         || props.FULL_ADDRESS 
@@ -640,6 +661,8 @@ function initiateBuffer(feature) {
                         || "N/A";
 
                     const locationValue = props[source.locKey] 
+                        || props.LocationCode
+                        || props.LOCATIONCODE
                         || props.cr_loc 
                         || props.LOCATION 
                         || props.FULL_CIVIC_ADDR 
@@ -845,7 +868,7 @@ function runQuery() {
     } else if (layerSelect === 'hospitals') {
         targetLayer.addLayer(createHospitalLayer({ type: "FeatureCollection", features: filtered }));
     } else if (layerSelect === 'road_safety') {
-        targetLayer.addLayer(createRoadSafetyLayer({ type: "FeatureCollection", features: filtered }));
+        renderRoadSafetyMarkers({ type: "FeatureCollection", features: filtered });
     } else if (layerSelect === 'districts') {
         targetLayer.addLayer(createDistrictLayer({ type: "FeatureCollection", features: filtered }));
     } else if (layerSelect === 'addresses') {
@@ -944,75 +967,92 @@ function updateLegend() {
 
     let itemsHtml = "";
 
+    // 1. York Boundary
     if (map.hasLayer(yorkLayer)) {
         itemsHtml += `
             <div class="legend-row">
-                <i class="legend-symbol" style="background: rgba(128, 0, 32, 0.2); border: 2px solid #800020; width:16px; height:16px;"></i> York Boundary
+                <i class="legend-symbol" style="background: rgba(128, 0, 32, 0.2); border: 2px solid #800020; width:16px; height:16px; display:inline-block;"></i> York Boundary
             </div>`;
     }
 
+    // 2. YRP District Boundaries
     if (map.hasLayer(districtLayer)) {
         itemsHtml += `
             <div class="legend-row">
-                <i class="legend-symbol" style="background: rgba(51, 136, 255, 0.2); border: 2px dashed #003399; width:16px; height:16px;"></i> YRP District
+                <i class="legend-symbol" style="background: rgba(51, 136, 255, 0.2); border: 2px dashed #003399; width:16px; height:16px; display:inline-block;"></i> YRP District
             </div>`;
     }
 
+    // 3. Police Stations (Solid Blue Badge with White Shield SVG)
     if (map.hasLayer(policeLayer)) {
+        const policeSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" width="12px" height="12px"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-5.45 9-12V5l-9-4zm-1 6h2v2h-2V7zm0 4h2v6h-2v-6z"/></svg>`;
         itemsHtml += `
             <div class="legend-row">
-                <i class="legend-symbol" style="background: #002b80; border: 1px solid #fff; border-radius: 50%; width: 14px; height: 14px;"></i> Police Stations
+                <span class="legend-symbol" style="display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; background:#002b80; border:1px solid #fff; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.3);">
+                    ${policeSvg}
+                </span> Police Stations
             </div>`;
     }
 
+    // 4. Hospitals (Red Circle Badge with White "H")
     if (map.hasLayer(hospitalLayer)) {
         itemsHtml += `
             <div class="legend-row">
-                <i class="legend-symbol" style="background: #d9534f; border: 1px solid #fff; border-radius: 50%; width: 14px; height: 14px;"></i> Hospitals
+                <span class="legend-symbol" style="display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; background:#d9534f; border:1px solid #fff; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.3); color:#fff; font-weight:bold; font-size:11px; font-family:sans-serif;">
+                    H
+                </span> Hospitals
             </div>`;
     }
 
+    // 5. Crime Occurrences
     if (map.hasLayer(crimeLayer)) {
         itemsHtml += `
             <div class="legend-row">
-                <i class="legend-symbol" style="background: #d9534f; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> High-Risk Incident
+                <i class="legend-symbol" style="background: #d9534f; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px; display:inline-block;"></i> High-Risk Incident
             </div>
             <div class="legend-row">
-                <i class="legend-symbol" style="background: #f0ad4e; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> Property / Theft Incident
+                <i class="legend-symbol" style="background: #f0ad4e; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px; display:inline-block;"></i> Property / Theft Incident
             </div>
             <div class="legend-row">
-                <i class="legend-symbol" style="background: #5bc0de; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> B&E / Mischief
+                <i class="legend-symbol" style="background: #5bc0de; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px; display:inline-block;"></i> B&E / Mischief
             </div>
             <div class="legend-row">
-                <i class="legend-symbol" style="background: #3388ff; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> Other Incident
+                <i class="legend-symbol" style="background: #3388ff; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px; display:inline-block;"></i> Other Incident
             </div>`;
     }
 
+    // 6. Road Safety (Yellow Warning Badge with Triangle SVG)
     if (map.hasLayer(roadSafetyLayer)) {
+        const warningSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#d9534f" width="10px" height="10px"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>`;
         itemsHtml += `
             <div class="legend-row">
-                <i class="legend-symbol" style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 50%; width: 12px; height: 12px;"></i> Road Safety (Zoom 13+)
+                <span class="legend-symbol" style="display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; background:#fff3cd; border:1px solid #ffc107; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.3);">
+                    ${warningSvg}
+                </span> Road Safety (Zoom 13+)
             </div>`;
     }
 
+    // 7. Roads
     if (map.hasLayer(roadsLayer)) {
         itemsHtml += `
             <div class="legend-row">
-                <i class="legend-symbol" style="background: #555; height: 3px; width:16px;"></i> Roads (Zoom 15+)
+                <i class="legend-symbol" style="background: #555; height: 3px; width:16px; display:inline-block;"></i> Roads (Zoom 15+)
             </div>`;
     }
 
+    // 8. Addresses
     if (map.hasLayer(addressesLayer)) {
         itemsHtml += `
             <div class="legend-row">
-                <i class="legend-symbol" style="background: #3388ff; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px;"></i> Addresses (Zoom 15+)
+                <i class="legend-symbol" style="background: #3388ff; border-radius: 50%; border: 1px solid #000; width: 12px; height: 12px; display:inline-block;"></i> Addresses (Zoom 15+)
             </div>`;
     }
 
+    // 9. Parcels
     if (map.hasLayer(parcelsLayer)) {
         itemsHtml += `
             <div class="legend-row">
-                <i class="legend-symbol" style="background: rgba(34, 139, 34, 0.2); border: 1px solid #228b22; width:16px; height:16px;"></i> Parcels (Zoom 15+)
+                <i class="legend-symbol" style="background: rgba(34, 139, 34, 0.2); border: 1px solid #228b22; width:16px; height:16px; display:inline-block;"></i> Parcels (Zoom 15+)
             </div>`;
     }
 
