@@ -14,10 +14,11 @@ const MIN_ZOOM_LEVEL = 15;
 // GLOBAL VARIABLES                                                                                                                                      //
 // ===================================================================================================================================================== //
 let yorkData = { type: "FeatureCollection", features: [] };
+let districtData = { type: "FeatureCollection", features: [] };
 let policeData = { type: "FeatureCollection", features: [] };
+let hospitalData = { type: "FeatureCollection", features: [] };
 let crimeData = { type: "FeatureCollection", features: [] };
 let roadSafetyData = { type: "FeatureCollection", features: [] };
-let hospitalData = { type: "FeatureCollection", features: [] };
 
 let roadsData = { type: "FeatureCollection", features: [] };
 let addressesData = { type: "FeatureCollection", features: [] };
@@ -27,7 +28,7 @@ let bufferResultsData = { type: "FeatureCollection", features: [] };
 let filteredQueryData = null; 
 const bufferLayerGroup = L.layerGroup().addTo(map);
 
-// Global Legend Reference
+// Global Legend Container Reference
 let legendContainerDiv = null;
 
 // Heatmap & Operational Variables
@@ -83,27 +84,41 @@ fetch('https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Boundary/MapServer/
     })
     .catch(err => console.error("Error loading York Boundaries GeoJSON:", err));
 
-// 2. YRP District Boundaries Layer (Semi-Transparent Polygons + Centered District # Labels)
-const districtLayer = L.geoJSON(yrpDistrictsGeoJSON, {
-    style: {
-        color: "#003399",
-        weight: 2,
-        dashArray: "6, 6",
-        fillColor: "#3388ff",
-        fillOpacity: 0.12
-    },
-    onEachFeature: (feature, layer) => {
-        bindPopupWithBuffer(feature, layer);
-        if (feature.properties && feature.properties.DistrictNumber) {
-            const districtNum = feature.properties.DistrictNumber;
-            layer.bindTooltip(`District ${districtNum}`, {
-                permanent: true,
-                direction: 'center',
-                className: 'district-label-tooltip'
-            });
+// 2. YRP District Boundaries Layer (Fetched from local districts.json)
+const districtLayer = L.layerGroup().addTo(map);
+
+function createDistrictLayer(data) {
+    return L.geoJSON(data, {
+        style: {
+            color: "#003399",
+            weight: 2,
+            dashArray: "6, 6",
+            fillColor: "#3388ff",
+            fillOpacity: 0.12
+        },
+        onEachFeature: (feature, layer) => {
+            bindPopupWithBuffer(feature, layer);
+            if (feature.properties && feature.properties.DistrictNumber) {
+                const districtNum = feature.properties.DistrictNumber;
+                layer.bindTooltip(`District ${districtNum}`, {
+                    permanent: true,
+                    direction: 'center',
+                    className: 'district-label-tooltip'
+                });
+            }
         }
-    }
-}).addTo(map);
+    });
+}
+
+fetch('districts.json')
+    .then(response => response.json())
+    .then(data => {
+        districtData = data;
+        districtLayer.clearLayers();
+        districtLayer.addLayer(createDistrictLayer(data));
+        updateLegend();
+    })
+    .catch(err => console.error("Error loading Districts GeoJSON:", err));
 
 // ===================================================================================================================================================== //
 // STATIC PUBLIC SAFETY LAYERS (POLICE, HOSPITALS, CRIME, ROAD SAFETY)                                                                                  //
@@ -146,7 +161,7 @@ fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Police
     })
     .catch(err => console.error("Error loading Police Stations GeoJSON:", err));
 
-// 2. Hospitals Layer (Red Badge with White "H" Badge)
+// 2. Hospitals Layer (Red Circle Badge with White "H")
 const hospitalLayer = L.layerGroup().addTo(map);
 
 function createHospitalLayer(data) {
@@ -263,18 +278,16 @@ fetch('yk_crime_rpt22.json')
     })
     .catch(err => console.error("Error loading Crime GeoJSON:", err));
 
-// 4. Road Safety Layer (Collision Point Markers set to render ONLY at Zoom 15+)
+// 4. Road Safety Layer (Point Markers rendered ONLY at Zoom Level 15+)
 const roadSafetyLayer = L.layerGroup().addTo(map);
 
 function renderRoadSafetyMarkers() {
     roadSafetyLayer.clearLayers();
     if (!roadSafetyData || !roadSafetyData.features) return;
 
-    // Build the Heatmap across ALL zoom levels
     const heatPoints = [];
 
-    dataFeatures = roadSafetyData.features;
-    dataFeatures.forEach(feature => {
+    roadSafetyData.features.forEach(feature => {
         if (feature.geometry && feature.geometry.coordinates) {
             const lng = parseFloat(feature.geometry.coordinates[0]);
             const lat = parseFloat(feature.geometry.coordinates[1]);
@@ -282,20 +295,20 @@ function renderRoadSafetyMarkers() {
             if (!isNaN(lat) && !isNaN(lng)) {
                 heatPoints.push([lat, lng, 0.7]);
 
-                // Individual markers render ONLY if zoomed in to Zoom Level 15+
+                // Point markers render ONLY if zoomed in to Zoom Level 15+
                 if (map.getZoom() >= MIN_ZOOM_LEVEL) {
                     const warningSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#d9534f" width="14px" height="14px">
                         <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
                     </svg>`;
 
-                    const iconHtml = `<div style="display:flex; align-items:center; justify-content:center; width:24px; height:26px; background:#fff3cd; border:2px solid #ffc107; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.3);">${warningSvg}</div>`;
+                    const iconHtml = `<div style="display:flex; align-items:center; justify-content:center; width:24px; height:24px; background:#fff3cd; border:2px solid #ffc107; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.3);">${warningSvg}</div>`;
 
                     const warningIcon = L.divIcon({
                         className: 'road-safety-div-icon',
                         html: iconHtml,
-                        iconSize: [26, 26],
-                        iconAnchor: [13, 13],
-                        popupAnchor: [0, -13]
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12],
+                        popupAnchor: [0, -12]
                     });
 
                     const marker = L.marker([lat, lng], { icon: warningIcon });
@@ -338,7 +351,6 @@ const parcelsLayer = L.geoJSON(null, { style: { color: "#228b22", weight: 1, opa
 function fetchViewportData() {
     const currentZoom = map.getZoom();
 
-    // Trigger Road Safety marker updates based on Zoom threshold
     renderRoadSafetyMarkers();
 
     if (currentZoom < MIN_ZOOM_LEVEL) {
@@ -598,7 +610,7 @@ function initiateBuffer(feature) {
 
     const sources = [
         { name: "York Boundary", list: yorkData.features, aliasKey: "NAME", locKey: "MUNICIPALITY" },
-        { name: "YRP Districts", list: yrpDistrictsGeoJSON.features, aliasKey: "DistrictNumber", locKey: "DistrictNumber" },
+        { name: "YRP Districts", list: districtData.features, aliasKey: "DistrictNumber", locKey: "DistrictNumber" },
         { name: "Roads", list: roadsData.features, aliasKey: "STREET_NAME", locKey: "FULL_CIVIC_ADDR" },
         { name: "Addresses", list: addressesData.features, aliasKey: "FULL_ADDRESS", locKey: "MUNICIPALITY" },
         { name: "Parcels", list: parcelsData.features, aliasKey: "ARN", locKey: "LOCATION" },
@@ -672,7 +684,7 @@ function getLayerData(id) {
     if (filteredQueryData && id === queryLayer) return filteredQueryData;
 
     if (id === 'york') return yorkData;
-    if (id === 'districts') return yrpDistrictsGeoJSON;
+    if (id === 'districts') return districtData;
     if (id === 'roads') return roadsData;
     if (id === 'addresses') return addressesData;
     if (id === 'parcels') return parcelsData;
@@ -833,6 +845,8 @@ function runQuery() {
         targetLayer.addLayer(createHospitalLayer({ type: "FeatureCollection", features: filtered }));
     } else if (layerSelect === 'road_safety') {
         targetLayer.addLayer(createRoadSafetyLayer({ type: "FeatureCollection", features: filtered }));
+    } else if (layerSelect === 'districts') {
+        targetLayer.addLayer(createDistrictLayer({ type: "FeatureCollection", features: filtered }));
     } else if (layerSelect === 'addresses') {
         const geoJsonData = L.geoJSON({ type: "FeatureCollection", features: filtered }, {
             pointToLayer: (feature, latlng) => L.circleMarker(latlng, { radius: 5, fillColor: "#3388ff", color: "#000", weight: 0.5, opacity: 1, fillOpacity: 0.8 }),
@@ -859,7 +873,7 @@ function resetQuery() {
     crimeLayer.clearLayers(); crimeLayer.addLayer(createCrimeLayer(crimeData));
     roadSafetyLayer.clearLayers(); renderRoadSafetyMarkers();
     yorkLayer.clearLayers(); yorkLayer.addData(yorkData);
-    districtLayer.clearLayers(); districtLayer.addData(yrpDistrictsGeoJSON);
+    districtLayer.clearLayers(); districtLayer.addLayer(createDistrictLayer(districtData));
     fetchViewportData();
     if (document.getElementById('attributeTable').style.display === 'flex') switchTableLayer();
 }
