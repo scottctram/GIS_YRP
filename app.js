@@ -9,6 +9,7 @@ const initialCenter = [44.00, -79.45];
 const map = L.map('map', { zoomControl: true }).setView(initialCenter, initialZoom);
 
 const MIN_ZOOM_LEVEL = 15; 
+const ROAD_SAFETY_ZOOM_LEVEL = 13; // Zoom 13 = ~2km viewport threshold for individual collision markers
 
 // ===================================================================================================================================================== //
 // GLOBAL VARIABLES                                                                                                                                      //
@@ -278,7 +279,7 @@ fetch('yk_crime_rpt22.json')
     })
     .catch(err => console.error("Error loading Crime GeoJSON:", err));
 
-// 4. Road Safety Layer (Point Markers rendered ONLY at Zoom Level 15+)
+// 4. Road Safety Layer (Point Markers rendered at Zoom Level 13+ / ~2km View)
 const roadSafetyLayer = L.layerGroup().addTo(map);
 
 function renderRoadSafetyMarkers() {
@@ -295,8 +296,8 @@ function renderRoadSafetyMarkers() {
             if (!isNaN(lat) && !isNaN(lng)) {
                 heatPoints.push([lat, lng, 0.7]);
 
-                // Point markers render ONLY if zoomed in to Zoom Level 15+
-                if (map.getZoom() >= MIN_ZOOM_LEVEL) {
+                // Point markers render when zoomed to Zoom Level 13+ (~2km view)
+                if (map.getZoom() >= ROAD_SAFETY_ZOOM_LEVEL) {
                     const warningSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#d9534f" width="14px" height="14px">
                         <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
                     </svg>`;
@@ -893,7 +894,7 @@ const overlayMaps = {
     "Police Stations": policeLayer,
     "Hospitals": hospitalLayer,
     "Crime Occurrences": crimeLayer,
-    "Road Safety (Zoom 15+)": roadSafetyLayer,
+    "Road Safety (Zoom 13+)": roadSafetyLayer,
     "Roads (Zoomed)": roadsLayer,
     "Addresses (Zoomed)": addressesLayer,
     "Parcels (Zoomed)": parcelsLayer
@@ -990,7 +991,7 @@ function updateLegend() {
     if (map.hasLayer(roadSafetyLayer)) {
         itemsHtml += `
             <div class="legend-row">
-                <i class="legend-symbol" style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 50%; width: 12px; height: 12px;"></i> Road Safety (Zoom 15+)
+                <i class="legend-symbol" style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 50%; width: 12px; height: 12px;"></i> Road Safety (Zoom 13+)
             </div>`;
     }
 
