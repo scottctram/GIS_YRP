@@ -12,7 +12,7 @@ const MIN_ZOOM_LEVEL = 15;
 const ROAD_SAFETY_ZOOM_LEVEL = 13; // Zoom 13 = ~2km viewport threshold for individual collision markers
 
 // Month Mapping Array
-const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 // ===================================================================================================================================================== //
 // GLOBAL VARIABLES                                                                                                                                      //
@@ -42,6 +42,7 @@ let roadSafetyHeatmapLayer = null;
 let currentShiftFilter = "ALL"; // "ALL", "DAY", "NIGHT"
 let currentPersonaMode = "ANALYST"; // "ANALYST", "OFFICER"
 let currentSelectedMonth = "ALL"; // "ALL" or 0-11 (0=Jan, 11=Dec)
+let timelineInterval = null;
 
 // ===================================================================================================================================================== //
 // BASEMAPS                                                                                                                                              //
@@ -475,7 +476,12 @@ function toggleTrafficHeatmap() {
     }
 }
 
-// Temporal Time Slider Handler
+// Timeline Modal & Playback Control Functions
+function toggleTimelineModal() {
+    const modal = document.getElementById('timelineModal');
+    if (modal) modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
+}
+
 function updateTemporalSlider(val) {
     const monthLabel = document.getElementById('time-slider-label');
     if (val === "12" || val === 12) {
@@ -489,12 +495,46 @@ function updateTemporalSlider(val) {
     applyCombinedFilters();
 }
 
+function toggleTimelinePlayback() {
+    const btn = document.getElementById('btn-play-timeline');
+    if (timelineInterval) {
+        clearInterval(timelineInterval);
+        timelineInterval = null;
+        if (btn) btn.innerHTML = `<i class="fa-solid fa-play"></i> Play Timeline`;
+    } else {
+        if (btn) btn.innerHTML = `<i class="fa-solid fa-pause"></i> Pause Timeline`;
+        let curVal = (currentSelectedMonth === "ALL") ? 0 : currentSelectedMonth;
+        
+        timelineInterval = setInterval(() => {
+            updateTemporalSlider(curVal);
+            const slider = document.getElementById('time-slider');
+            if (slider) slider.value = curVal;
+            
+            curVal = (curVal + 1) % 12;
+        }, 1200);
+    }
+}
+
+function resetTimelineFilter() {
+    if (timelineInterval) {
+        clearInterval(timelineInterval);
+        timelineInterval = null;
+        const btn = document.getElementById('btn-play-timeline');
+        if (btn) btn.innerHTML = `<i class="fa-solid fa-play"></i> Play Timeline`;
+    }
+    const timeSlider = document.getElementById('time-slider');
+    if (timeSlider) {
+        timeSlider.value = 12;
+        updateTemporalSlider(12);
+    }
+}
+
 function applyCombinedFilters() {
     const selectedRiskCategory = document.getElementById('crime-risk-select') ? document.getElementById('crime-risk-select').value : 'ALL';
     const selectedCrimeType = document.getElementById('crime-type-select') ? document.getElementById('crime-type-select').value : 'ALL';
     const statusDiv = document.getElementById('crime-filter-status');
 
-    // 1. Filter Crime Occurrences Layer (Temporal month filtering via occ_date)
+    // 1. Filter Crime Occurrences Layer
     let filteredCrimes = [];
     if (crimeData && crimeData.features) {
         filteredCrimes = crimeData.features.filter(f => {
@@ -527,7 +567,7 @@ function applyCombinedFilters() {
     crimeLayer.clearLayers();
     crimeLayer.addLayer(createCrimeLayer({ type: "FeatureCollection", features: filteredCrimes }));
 
-    // 2. Filter Road Safety Layer (Temporal month filtering via occ_date)
+    // 2. Filter Road Safety Layer
     let filteredTraffic = [];
     if (roadSafetyData && roadSafetyData.features) {
         filteredTraffic = roadSafetyData.features.filter(f => {
@@ -649,17 +689,9 @@ function filterCrimeData() {
 function resetCrimeFilter() {
     const riskSelect = document.getElementById('crime-risk-select');
     const typeSelect = document.getElementById('crime-type-select');
-    const timeSlider = document.getElementById('time-slider');
-    
     if (riskSelect) riskSelect.value = 'ALL';
     if (typeSelect) typeSelect.value = 'ALL';
-    if (timeSlider) {
-        timeSlider.value = 12;
-        updateTemporalSlider(12);
-    }
-    
-    currentShiftFilter = 'ALL';
-    applyCombinedFilters();
+    resetTimelineFilter();
 }
 
 // ===================================================================================================================================================== //
@@ -995,6 +1027,7 @@ const navControl = L.Control.extend({
         createBtn('fa-solid fa-house', 'Home', goHome);
         createBtn('fa-solid fa-filter', 'Query Builder', toggleQueryModal);
         createBtn('fa-solid fa-mask', 'Crime Filter', toggleCrimeFilterModal);
+        createBtn('fa-solid fa-calendar-days', 'Timeline Filter', toggleTimelineModal);
         createBtn('fa-solid fa-fire', 'Toggle Crime Heatmap', toggleCrimeHeatmap);
         createBtn('fa-solid fa-triangle-exclamation', 'Toggle Traffic Heatmap', toggleTrafficHeatmap);
         createBtn('fa-solid fa-table-list', 'Table', toggleAttributeTable);
@@ -1002,41 +1035,6 @@ const navControl = L.Control.extend({
     }
 });
 map.addControl(new navControl());
-
-// Dynamic Custom Leaflet Control for the Temporal Slider (Bottom Right)
-const timeSliderControl = L.control({ position: 'bottomright' });
-
-timeSliderControl.onAdd = function () {
-    const div = L.DomUtil.create('div', 'time-slider-container');
-    div.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
-    div.style.padding = '10px 14px';
-    div.style.borderRadius = '6px';
-    div.style.boxShadow = '0 2px 10px rgba(0,0,0,0.3)';
-    div.style.minWidth = '220px';
-    div.style.fontFamily = 'sans-serif';
-
-    div.innerHTML = `
-        <div style="font-weight: bold; font-size: 12px; margin-bottom: 6px; color: #003399; display: flex; justify-content: space-between;">
-            <span><i class="fa-solid fa-calendar-days"></i> Temporal Filter</span>
-            <span id="time-slider-label" style="color:#d9534f;">All Months (Jan - Dec)</span>
-        </div>
-        <input id="time-slider" type="range" min="0" max="12" value="12" step="1" 
-               style="width: 100%; cursor: pointer;" oninput="updateTemporalSlider(this.value)">
-        <div style="display: flex; justify-content: space-between; font-size: 10px; color: #666; margin-top: 4px;">
-            <span>Jan</span>
-            <span>Jun</span>
-            <span>Dec</span>
-            <span>All</span>
-        </div>
-    `;
-
-    L.DomEvent.disableClickPropagation(div);
-    L.DomEvent.disableScrollPropagation(div);
-
-    return div;
-};
-
-timeSliderControl.addTo(map);
 
 // ===================================================================================================================================================== //
 // DYNAMIC LEGEND CONTROL                                                                                                                                //
