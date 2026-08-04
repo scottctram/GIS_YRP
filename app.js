@@ -1,3 +1,258 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow: hidden;
+}
+
+#map {
+    height: 100vh;
+    width: 100%;
+    transition: height 0.3s;
+}
+
+/* --- Top Persona Bar --- */
+.persona-toolbar {
+    position: absolute;
+    top: 10px;
+    left: 60px;
+    z-index: 1000;
+    background: rgba(0, 51, 153, 0.95);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+.persona-title {
+    font-weight: bold;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.persona-buttons {
+    display: flex;
+    gap: 6px;
+}
+.btn-persona {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+.btn-persona.active, .btn-persona:hover {
+    background: white;
+    color: #003399;
+    font-weight: bold;
+}
+
+/* --- Shift Toolbar --- */
+.shift-toolbar {
+    position: absolute;
+    top: 52px;
+    left: 60px;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 5px 12px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #333;
+}
+.btn-shift {
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+}
+.btn-shift.active {
+    background: #003399;
+    color: white;
+    border-color: #003399;
+    font-weight: bold;
+}
+
+/* --- Viewport Briefing Panel --- */
+.briefing-panel {
+    position: absolute;
+    top: 10px;
+    right: 60px;
+    z-index: 1000;
+    background: white;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 10px 14px;
+    border-radius: 6px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    width: 210px;
+    font-size: 12px;
+    color: #333;
+}
+.briefing-header {
+    font-weight: bold;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 4px;
+    margin-bottom: 6px;
+    color: #003399;
+    text-transform: uppercase;
+    font-size: 11px;
+}
+.briefing-stat-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+/* --- Time Slider Container Widget --- */
+.time-slider-container {
+    position: absolute;
+    bottom: 30px;
+    right: 20px;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 10px 14px;
+    border-radius: 6px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+    width: 240px;
+    font-size: 12px;
+    color: #333;
+}
+.time-slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    color: #003399;
+    font-size: 11px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 4px;
+}
+.btn-timeline-play {
+    background: #003399;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+}
+.btn-timeline-play:hover {
+    background: #002266;
+}
+.time-slider-body input[type=range] {
+    width: 100%;
+    margin: 4px 0;
+    cursor: pointer;
+}
+.time-slider-labels {
+    display: flex;
+    justify-content: center;
+    font-size: 12px;
+    color: #444;
+    margin-top: 2px;
+}
+
+/* --- District Label Tooltips --- */
+.district-label-tooltip {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    font-weight: bold;
+    font-size: 14px;
+    color: #002b80;
+    text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;
+}
+
+/* --- Popup Button Styles --- */
+.popup-content { min-width: 150px; }
+.popup-btn {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding: 6px 10px;
+    background-color: #003399;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    text-align: center;
+}
+.popup-btn:hover { background-color: #002266; }
+
+/* --- Legend Styles --- */
+.legend {
+    background: white;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    padding: 10px 14px;
+    color: #333;
+    min-width: 170px;
+    font-size: 13px;
+    line-height: 1.4;
+}
+.legend h4 {
+    margin: 0 0 8px 0;
+    color: #111;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 4px;
+}
+.legend-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.legend-symbol {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+/* --- Custom Navigation Controls --- */
+.leaflet-control-custom a {
+    font-size: 18px;
+    color: #333;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    cursor: pointer;
+}
+.leaflet-control-custom a:hover {
+    background-color: white;
+    color: #333;
+}
+
+/* --- Query Modal Styles --- */
+.modal-backdrop {
+    Here is the complete JavaScript application file (`app.js`) updated with an integrated, functional **Temporal Month Slider Control** (Jan – Dec) filtering both **Crime Occurrences** and **Road Safety** layers using the `occ_date` field[cite: 1].
+
+### Updated `app.js`
+
+```javascript
 // APP JavaScript File - York Regional Police Public Safety & Intelligence Web Map
 
 // ===================================================================================================================================================== //
@@ -10,6 +265,9 @@ const map = L.map('map', { zoomControl: true }).setView(initialCenter, initialZo
 
 const MIN_ZOOM_LEVEL = 15; 
 const ROAD_SAFETY_ZOOM_LEVEL = 13; // Zoom 13 = ~2km viewport threshold for individual collision markers
+
+// Month Mapping Array
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // ===================================================================================================================================================== //
 // GLOBAL VARIABLES                                                                                                                                      //
@@ -38,13 +296,14 @@ let roadSafetyHeatmapLayer = null;
 
 let currentShiftFilter = "ALL"; // "ALL", "DAY", "NIGHT"
 let currentPersonaMode = "ANALYST"; // "ANALYST", "OFFICER"
+let currentSelectedMonth = "ALL"; // "ALL" or 0-11 (0=Jan, 11=Dec)
 
 // ===================================================================================================================================================== //
 // BASEMAPS                                                                                                                                              //
 // ===================================================================================================================================================== //
-const osmLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
-const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri' });
-const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO', subdomains: 'abcd', maxZoom: 20 });
+const osmLayer = L.tileLayer('[https://tile.openstreetmap.org/](https://tile.openstreetmap.org/){z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+const satelliteLayer = L.tileLayer('[https://server.arcgiscom/ArcGIS/rest/services/World_Imagery/MapServer/tile/](https://server.arcgiscom/ArcGIS/rest/services/World_Imagery/MapServer/tile/){z}/{y}/{x}', { attribution: '&copy; Esri' });
+const darkLayer = L.tileLayer('https://{s}[.basemaps.cartocdn.com/dark_all/](https://.basemaps.cartocdn.com/dark_all/){z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO', subdomains: 'abcd', maxZoom: 20 });
 
 // Helper: Popup displaying feature fields and a Buffer Trigger
 function bindPopupWithBuffer(feature, layer) {
@@ -65,6 +324,16 @@ function bindPopupWithBuffer(feature, layer) {
     layer.bindPopup(div);
 }
 
+// Helper: Extract 0-indexed Month (0-11) from occ_date property
+function getMonthFromOccDate(occDateRaw) {
+    if (!occDateRaw) return null;
+    const dt = new Date(occDateRaw);
+    if (!isNaN(dt.getTime())) {
+        return dt.getMonth(); // Returns 0 for Jan, 11 for Dec
+    }
+    return null;
+}
+
 // ===================================================================================================================================================== //
 // BOUNDARIES & DISTRICTS LAYERS                                                                                                                         //
 // ===================================================================================================================================================== //
@@ -75,7 +344,7 @@ const yorkLayer = L.geoJSON(null, {
     onEachFeature: bindPopupWithBuffer
 });
 
-fetch('https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Boundary/MapServer/1/query?outFields=*&where=1%3D1&f=geojson')
+fetch('[https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Boundary/MapServer/1/query?outFields=*&where=1%3D1&f=geojson](https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Boundary/MapServer/1/query?outFields=*&where=1%3D1&f=geojson)')
     .then(response => response.json())
     .then(data => {
         yorkData = data;
@@ -85,7 +354,7 @@ fetch('https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Boundary/MapServer/
     })
     .catch(err => console.error("Error loading York Boundaries GeoJSON:", err));
 
-// 2. YRP District Boundaries Layer (Fetched from local districts.json)
+// 2. YRP District Boundaries Layer
 const districtLayer = L.layerGroup().addTo(map);
 
 function createDistrictLayer(data) {
@@ -131,7 +400,7 @@ const policeLayer = L.layerGroup().addTo(map);
 function createPoliceLayer(data) {
     return L.geoJSON(data, {
         pointToLayer: (feature, latlng) => {
-            const svgBadge = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" width="18px" height="18px">
+            const svgBadge = `<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" viewBox="0 0 24 24" fill="#ffffff" width="18px" height="18px">
                 <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-5.45 9-12V5l-9-4zm-1 6h2v2h-2V7zm0 4h2v6h-2v-6z"/>
             </svg>`;
 
@@ -152,7 +421,7 @@ function createPoliceLayer(data) {
     });
 }
 
-fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/PoliceStation/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson')
+fetch('[https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/PoliceStation/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson](https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/PoliceStation/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson)')
     .then(response => response.json())
     .then(data => {
         policeData = data;
@@ -162,7 +431,7 @@ fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Police
     })
     .catch(err => console.error("Error loading Police Stations GeoJSON:", err));
 
-// 2. Hospitals Layer (Red Circle Badge with White "H")
+// 2. Hospitals Layer
 const hospitalLayer = L.layerGroup().addTo(map);
 
 function createHospitalLayer(data) {
@@ -185,7 +454,7 @@ function createHospitalLayer(data) {
     });
 }
 
-fetch('https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Health_And_Safety/MapServer/1/query?outFields=*&where=1%3D1&f=geojson')
+fetch('[https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Health_And_Safety/MapServer/1/query?outFields=*&where=1%3D1&f=geojson](https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Health_And_Safety/MapServer/1/query?outFields=*&where=1%3D1&f=geojson)')
     .then(response => response.json())
     .then(data => {
         hospitalData = data;
@@ -279,7 +548,7 @@ fetch('yk_crime_rpt22.json')
     })
     .catch(err => console.error("Error loading Crime GeoJSON:", err));
 
-// 4. Road Safety Layer (Point Markers rendered at Zoom Level 13+ / ~2km View)
+// 4. Road Safety Layer
 const roadSafetyLayer = L.layerGroup().addTo(map);
 
 function renderRoadSafetyMarkers(dataToRender) {
@@ -297,9 +566,8 @@ function renderRoadSafetyMarkers(dataToRender) {
             if (!isNaN(lat) && !isNaN(lng)) {
                 heatPoints.push([lat, lng, 0.7]);
 
-                // Point markers render when zoomed to Zoom Level 13+ (~2km view)
                 if (map.getZoom() >= ROAD_SAFETY_ZOOM_LEVEL) {
-                    const warningSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#d9534f" width="14px" height="14px">
+                    const warningSvg = `<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" viewBox="0 0 24 24" fill="#d9534f" width="14px" height="14px">
                         <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
                     </svg>`;
 
@@ -332,7 +600,7 @@ function renderRoadSafetyMarkers(dataToRender) {
     }
 }
 
-fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Road_Safety/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson')
+fetch('[https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Road_Safety/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson](https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Road_Safety/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson)')
     .then(response => response.json())
     .then(data => {
         roadSafetyData = data;
@@ -343,7 +611,7 @@ fetch('https://services8.arcgis.com/lYI034SQcOoxRCR7/arcgis/rest/services/Road_S
     .catch(err => console.error("Error loading Road Safety GeoJSON:", err));
 
 // ===================================================================================================================================================== //
-// DYNAMIC VIEWPORT (BBOX) LAYERS (ROADS, ADDRESSES, PARCELS)                                                                                           //
+// DYNAMIC VIEWPORT (BBOX) LAYERS                                                                                                                       //
 // ===================================================================================================================================================== //
 
 const roadsLayer = L.geoJSON(null, { style: { color: "#555555", weight: 2, opacity: 0.8 }, onEachFeature: bindPopupWithBuffer });
@@ -368,14 +636,14 @@ function fetchViewportData() {
     const bbox = map.getBounds().toBBoxString();
 
     if (map.hasLayer(roadsLayer)) {
-        fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Transportation/MapServer/1/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
+        fetch(`[https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Transportation/MapServer/1/query?outFields=*&geometry=$](https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Transportation/MapServer/1/query?outFields=*&geometry=$){bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
             .then(res => res.json())
             .then(data => { roadsData = data; roadsLayer.clearLayers(); roadsLayer.addData(data); })
             .catch(err => console.error("Error fetching BBOX Roads:", err));
     }
 
     if (map.hasLayer(addressesLayer)) {
-        fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Location/MapServer/0/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
+        fetch(`[https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Location/MapServer/0/query?outFields=*&geometry=$](https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Location/MapServer/0/query?outFields=*&geometry=$){bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
             .then(res => res.json())
             .then(data => {
                 addressesData = data;
@@ -390,7 +658,7 @@ function fetchViewportData() {
     }
 
     if (map.hasLayer(parcelsLayer)) {
-        fetch(`https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Planning/FeatureServer/0/query?outFields=*&geometry=${bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
+        fetch(`[https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Planning/FeatureServer/0/query?outFields=*&geometry=$](https://ww8.yorkmaps.ca/arcgis/rest/services/OpenData/Planning/FeatureServer/0/query?outFields=*&geometry=$){bbox}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&f=geojson`)
             .then(res => res.json())
             .then(data => { parcelsData = data; parcelsLayer.clearLayers(); parcelsLayer.addData(data); })
             .catch(err => console.error("Error fetching BBOX Parcels:", err));
@@ -410,7 +678,7 @@ map.on('overlayadd overlayremove', function(e) {
 });
 
 // ===================================================================================================================================================== //
-// OPERATIONAL SHIFT & INDEPENDENT HEATMAP CONTROLS                                                                                                     //
+// OPERATIONAL SHIFT, TEMPORAL SLIDER & COMBINED FILTERS                                                                                               //
 // ===================================================================================================================================================== //
 
 function setPersonaMode(mode) {
@@ -462,49 +730,80 @@ function toggleTrafficHeatmap() {
     }
 }
 
-function applyCombinedFilters() {
-    if (!crimeData || !crimeData.features) return;
+// Temporal Time Slider Handler
+function updateTemporalSlider(val) {
+    const monthLabel = document.getElementById('time-slider-label');
+    if (val === "12" || val === 12) {
+        currentSelectedMonth = "ALL";
+        if (monthLabel) monthLabel.innerText = "All Months (Jan - Dec)";
+    } else {
+        const monthIndex = parseInt(val, 10);
+        currentSelectedMonth = monthIndex;
+        if (monthLabel) monthLabel.innerText = MONTH_NAMES[monthIndex];
+    }
+    applyCombinedFilters();
+}
 
+function applyCombinedFilters() {
     const selectedRiskCategory = document.getElementById('crime-risk-select') ? document.getElementById('crime-risk-select').value : 'ALL';
     const selectedCrimeType = document.getElementById('crime-type-select') ? document.getElementById('crime-type-select').value : 'ALL';
     const statusDiv = document.getElementById('crime-filter-status');
 
-    // 1. Filter Crime Occurrences Layer
-    const filteredCrimes = crimeData.features.filter(f => {
-        const props = f.properties || {};
-        const offenseType = props.cr_ucr_tra || props.CATEGORY || "";
-        const riskCategory = getCrimeCategory(offenseType);
+    // 1. Filter Crime Occurrences Layer (Temporal month filtering via occ_date)
+    let filteredCrimes = [];
+    if (crimeData && crimeData.features) {
+        filteredCrimes = crimeData.features.filter(f => {
+            const props = f.properties || {};
+            const offenseType = props.cr_ucr_tra || props.CATEGORY || "";
+            const riskCategory = getCrimeCategory(offenseType);
 
-        const riskMatch = (selectedRiskCategory === 'ALL') || (riskCategory === selectedRiskCategory);
-        const typeMatch = (selectedCrimeType === 'ALL') || (offenseType === selectedCrimeType);
+            const riskMatch = (selectedRiskCategory === 'ALL') || (riskCategory === selectedRiskCategory);
+            const typeMatch = (selectedCrimeType === 'ALL') || (offenseType === selectedCrimeType);
 
-        let shiftMatch = true;
-        if (currentShiftFilter !== 'ALL') {
-            const rawTime = parseInt(props.occ_time, 10);
-            if (!isNaN(rawTime)) {
-                const isDay = (rawTime >= 700 && rawTime < 1900);
-                shiftMatch = (currentShiftFilter === 'DAY') ? isDay : !isDay;
+            let shiftMatch = true;
+            if (currentShiftFilter !== 'ALL') {
+                const rawTime = parseInt(props.occ_time, 10);
+                if (!isNaN(rawTime)) {
+                    const isDay = (rawTime >= 700 && rawTime < 1900);
+                    shiftMatch = (currentShiftFilter === 'DAY') ? isDay : !isDay;
+                }
             }
-        }
 
-        return riskMatch && typeMatch && shiftMatch;
-    });
+            let temporalMatch = true;
+            if (currentSelectedMonth !== "ALL") {
+                const featureMonth = getMonthFromOccDate(props.occ_date);
+                temporalMatch = (featureMonth === currentSelectedMonth);
+            }
+
+            return riskMatch && typeMatch && shiftMatch && temporalMatch;
+        });
+    }
 
     crimeLayer.clearLayers();
     crimeLayer.addLayer(createCrimeLayer({ type: "FeatureCollection", features: filteredCrimes }));
 
-    // 2. Filter Road Safety Incidents by Active Shift (using time_est field)
+    // 2. Filter Road Safety Layer (Temporal month filtering via occ_date)
     let filteredTraffic = [];
     if (roadSafetyData && roadSafetyData.features) {
         filteredTraffic = roadSafetyData.features.filter(f => {
-            if (currentShiftFilter === 'ALL') return true;
             const props = f.properties || {};
-            const rawTime = parseInt(props.time_est || props.ACCIDENT_TIME || props.TIME, 10);
-            if (!isNaN(rawTime)) {
-                const isDay = (rawTime >= 700 && rawTime < 1900);
-                return (currentShiftFilter === 'DAY') ? isDay : !isDay;
+
+            let shiftMatch = true;
+            if (currentShiftFilter !== 'ALL') {
+                const rawTime = parseInt(props.time_est || props.ACCIDENT_TIME || props.TIME, 10);
+                if (!isNaN(rawTime)) {
+                    const isDay = (rawTime >= 700 && rawTime < 1900);
+                    shiftMatch = (currentShiftFilter === 'DAY') ? isDay : !isDay;
+                }
             }
-            return true;
+
+            let temporalMatch = true;
+            if (currentSelectedMonth !== "ALL") {
+                const featureMonth = getMonthFromOccDate(props.occ_date);
+                temporalMatch = (featureMonth === currentSelectedMonth);
+            }
+
+            return shiftMatch && temporalMatch;
         });
     }
 
@@ -558,12 +857,14 @@ function updateOperationalBriefingCard() {
     }
 
     const topOffense = Object.keys(categoryCounts).sort((a, b) => categoryCounts[b] - categoryCounts[a])[0] || "None";
+    const monthText = (currentSelectedMonth === "ALL") ? "All Months" : MONTH_NAMES[currentSelectedMonth];
 
     briefingDiv.innerHTML = `
         <div class="briefing-stat-row"><span>Crimes in View:</span> <b>${totalInView}</b></div>
         <div class="briefing-stat-row"><span>High-Risk Hazards:</span> <b style="color:#d9534f;">${highRiskCount}</b></div>
         <div class="briefing-stat-row"><span>Traffic Hazards:</span> <b style="color:#f0ad4e;">${trafficCollisionsInView}</b></div>
         <div class="briefing-stat-row"><span>Primary Offense:</span> <b>${topOffense.substring(0, 20)}</b></div>
+        <div class="briefing-stat-row"><span>Active Month:</span> <b>${monthText}</b></div>
         <div class="briefing-stat-row"><span>Active Shift:</span> <b>${currentShiftFilter}</b></div>
     `;
 }
@@ -603,8 +904,15 @@ function filterCrimeData() {
 function resetCrimeFilter() {
     const riskSelect = document.getElementById('crime-risk-select');
     const typeSelect = document.getElementById('crime-type-select');
+    const timeSlider = document.getElementById('time-slider');
+    
     if (riskSelect) riskSelect.value = 'ALL';
     if (typeSelect) typeSelect.value = 'ALL';
+    if (timeSlider) {
+        timeSlider.value = 12;
+        updateTemporalSlider(12);
+    }
+    
     currentShiftFilter = 'ALL';
     applyCombinedFilters();
 }
@@ -950,6 +1258,42 @@ const navControl = L.Control.extend({
 });
 map.addControl(new navControl());
 
+// Dynamic Custom Leaflet Control for the Temporal Slider (Bottom Right)
+const timeSliderControl = L.control({ position: 'bottomright' });
+
+timeSliderControl.onAdd = function () {
+    const div = L.DomUtil.create('div', 'time-slider-container');
+    div.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+    div.style.padding = '10px 14px';
+    div.style.borderRadius = '6px';
+    div.style.boxShadow = '0 2px 10px rgba(0,0,0,0.3)';
+    div.style.minWidth = '220px';
+    div.style.fontFamily = 'sans-serif';
+
+    div.innerHTML = `
+        <div style="font-weight: bold; font-size: 12px; margin-bottom: 6px; color: #003399; display: flex; justify-content: space-between;">
+            <span><i class="fa-solid fa-calendar-days"></i> Temporal Filter</span>
+            <span id="time-slider-label" style="color:#d9534f;">All Months (Jan - Dec)</span>
+        </div>
+        <input id="time-slider" type="range" min="0" max="12" value="12" step="1" 
+               style="width: 100%; cursor: pointer;" oninput="updateTemporalSlider(this.value)">
+        <div style="display: flex; justify-content: space-between; font-size: 10px; color: #666; margin-top: 4px;">
+            <span>Jan</span>
+            <span>Jun</span>
+            <span>Dec</span>
+            <span>All</span>
+        </div>
+    `;
+
+    // Prevent map dragging/zooming while sliding
+    L.DomEvent.disableClickPropagation(div);
+    L.DomEvent.disableScrollPropagation(div);
+
+    return div;
+};
+
+timeSliderControl.addTo(map);
+
 // ===================================================================================================================================================== //
 // DYNAMIC LEGEND CONTROL                                                                                                                                //
 // ===================================================================================================================================================== //
@@ -967,7 +1311,6 @@ function updateLegend() {
 
     let itemsHtml = "";
 
-    // 1. York Boundary
     if (map.hasLayer(yorkLayer)) {
         itemsHtml += `
             <div class="legend-row">
@@ -975,7 +1318,6 @@ function updateLegend() {
             </div>`;
     }
 
-    // 2. YRP District Boundaries
     if (map.hasLayer(districtLayer)) {
         itemsHtml += `
             <div class="legend-row">
@@ -983,9 +1325,8 @@ function updateLegend() {
             </div>`;
     }
 
-    // 3. Police Stations (Solid Blue Badge with White Shield SVG)
     if (map.hasLayer(policeLayer)) {
-        const policeSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" width="12px" height="12px"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-5.45 9-12V5l-9-4zm-1 6h2v2h-2V7zm0 4h2v6h-2v-6z"/></svg>`;
+        const policeSvg = `<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" viewBox="0 0 24 24" fill="#ffffff" width="12px" height="12px"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-5.45 9-12V5l-9-4zm-1 6h2v2h-2V7zm0 4h2v6h-2v-6z"/></svg>`;
         itemsHtml += `
             <div class="legend-row">
                 <span class="legend-symbol" style="display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; background:#002b80; border:1px solid #fff; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.3);">
@@ -994,7 +1335,6 @@ function updateLegend() {
             </div>`;
     }
 
-    // 4. Hospitals (Red Circle Badge with White "H")
     if (map.hasLayer(hospitalLayer)) {
         itemsHtml += `
             <div class="legend-row">
@@ -1004,7 +1344,6 @@ function updateLegend() {
             </div>`;
     }
 
-    // 5. Crime Occurrences
     if (map.hasLayer(crimeLayer)) {
         itemsHtml += `
             <div class="legend-row">
@@ -1021,9 +1360,8 @@ function updateLegend() {
             </div>`;
     }
 
-    // 6. Road Safety (Yellow Warning Badge with Triangle SVG)
     if (map.hasLayer(roadSafetyLayer)) {
-        const warningSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#d9534f" width="10px" height="10px"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>`;
+        const warningSvg = `<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" viewBox="0 0 24 24" fill="#d9534f" width="10px" height="10px"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>`;
         itemsHtml += `
             <div class="legend-row">
                 <span class="legend-symbol" style="display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; background:#fff3cd; border:1px solid #ffc107; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.3);">
@@ -1032,7 +1370,6 @@ function updateLegend() {
             </div>`;
     }
 
-    // 7. Roads
     if (map.hasLayer(roadsLayer)) {
         itemsHtml += `
             <div class="legend-row">
@@ -1040,7 +1377,6 @@ function updateLegend() {
             </div>`;
     }
 
-    // 8. Addresses
     if (map.hasLayer(addressesLayer)) {
         itemsHtml += `
             <div class="legend-row">
@@ -1048,7 +1384,6 @@ function updateLegend() {
             </div>`;
     }
 
-    // 9. Parcels
     if (map.hasLayer(parcelsLayer)) {
         itemsHtml += `
             <div class="legend-row">
