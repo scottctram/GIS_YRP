@@ -41,23 +41,39 @@
         </div>
     </div>
 
-    <!-- Floating Temporal Time Slider Widget -->
-    <div id="time-slider-widget" class="time-slider-container">
-        <div class="time-slider-header">
-            <span><i class="fa-solid fa-calendar-days"></i> Timeline Filter</span>
-            <button id="btn-play-timeline" class="btn-timeline-play" onclick="toggleTimelinePlayback()" title="Play / Pause Animation">
-                <i class="fa-solid fa-play"></i>
-            </button>
-        </div>
-        <div class="time-slider-body">
-            <input type="range" id="time-range-slider" min="0" max="12" value="0" step="1" oninput="handleTimeSliderInput(this.value)">
-            <div class="time-slider-labels">
-                <span id="time-slider-display-val"><b>Show All Months</b></span>
+    <div id="map"></div>
+
+    <!-- Timeline / Month Filter Modal -->
+    <div id="timelineModal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span><i class="fa-solid fa-calendar-days"></i> Monthly Timeline Filter</span>
+                <span class="close-btn" onclick="toggleTimelineModal()">&times;</span>
+            </div>
+
+            <div class="query-row" style="text-align: center; margin: 15px 0;">
+                <span id="time-slider-label" style="font-weight: bold; font-size: 16px; color: #003399;">All Months (Jan - Dec)</span>
+            </div>
+
+            <div class="query-row">
+                <input id="time-slider" type="range" min="0" max="12" value="12" step="1" 
+                       style="width: 100%; cursor: pointer;" oninput="updateTemporalSlider(this.value)">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #666; margin-top: 6px;">
+                    <span>Jan</span>
+                    <span>Jun</span>
+                    <span>Dec</span>
+                    <span>All</span>
+                </div>
+            </div>
+
+            <div class="query-actions" style="margin-top: 20px;">
+                <button id="btn-play-timeline" class="btn-primary" onclick="toggleTimelinePlayback()">
+                    <i class="fa-solid fa-play"></i> Play Timeline
+                </button>
+                <button class="btn-secondary" onclick="resetTimelineFilter()">Reset All Months</button>
             </div>
         </div>
     </div>
-
-    <div id="map"></div>
 
     <!-- Query Modal -->
     <div id="queryModal" class="modal-backdrop">
@@ -158,7 +174,6 @@
                 <ul style="padding-left: 20px; margin: 10px 0;">
                     <li><strong>Analyst Mode:</strong> Density Heatmaps (Crime & Traffic), Query Builder & Spatial Buffers.</li>
                     <li><strong>Officer Mode:</strong> Day/Night Shift Filters & Viewport Patrol Briefing Cards.</li>
-                    <li><strong>Temporal Control:</strong> Filter crimes and collisions by month (Jan – Dec).</li>
                 </ul>
             </div>
             <div class="query-actions">
