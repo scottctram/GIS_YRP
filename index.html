@@ -16,12 +16,20 @@
 </head>
 <body>
 
-    <!-- Top Operational Persona Bar -->
+    <!-- Top Operational Persona & Time Slider Bar -->
     <div class="persona-toolbar">
         <div class="persona-title"><i class="fa-solid fa-shield-halved"></i> YRP Operational Command</div>
         <div class="persona-buttons">
             <button id="btn-persona-analyst" class="btn-persona active" onclick="setPersonaMode('ANALYST')"><i class="fa-solid fa-chart-line"></i> District Crime Analyst</button>
             <button id="btn-persona-officer" class="btn-persona" onclick="setPersonaMode('OFFICER')"><i class="fa-solid fa-car-side"></i> Front-Line Officer</button>
+        </div>
+
+        <!-- Time Slider Widget -->
+        <div class="time-slider-container">
+            <i class="fa-solid fa-calendar-days"></i>
+            <span id="time-slider-label">Jan – Dec</span>
+            <input type="range" id="month-slider" min="1" max="12" value="12" step="1" oninput="handleSliderChange(this.value)">
+            <button class="btn-time-reset" onclick="resetTimeSlider()" title="Reset Time Filter"><i class="fa-solid fa-rotate-left"></i></button>
         </div>
     </div>
 
@@ -185,7 +193,7 @@
     <!-- Leaflet & Plugin Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://unpkg.com/leaflet.pattern/dist/leaflet.pattern.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.js"></script>
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
     <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
