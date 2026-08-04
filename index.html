@@ -16,20 +16,12 @@
 </head>
 <body>
 
-    <!-- Top Operational Persona & Time Slider Bar -->
+    <!-- Top Operational Persona Bar -->
     <div class="persona-toolbar">
         <div class="persona-title"><i class="fa-solid fa-shield-halved"></i> YRP Operational Command</div>
         <div class="persona-buttons">
             <button id="btn-persona-analyst" class="btn-persona active" onclick="setPersonaMode('ANALYST')"><i class="fa-solid fa-chart-line"></i> District Crime Analyst</button>
             <button id="btn-persona-officer" class="btn-persona" onclick="setPersonaMode('OFFICER')"><i class="fa-solid fa-car-side"></i> Front-Line Officer</button>
-        </div>
-
-        <!-- Time Slider Widget -->
-        <div class="time-slider-container">
-            <i class="fa-solid fa-calendar-days"></i>
-            <span id="time-slider-label">Jan – Dec</span>
-            <input type="range" id="month-slider" min="1" max="12" value="12" step="1" oninput="handleSliderChange(this.value)">
-            <button class="btn-time-reset" onclick="resetTimeSlider()" title="Reset Time Filter"><i class="fa-solid fa-rotate-left"></i></button>
         </div>
     </div>
 
@@ -46,6 +38,22 @@
         <div class="briefing-header"><i class="fa-solid fa-clipboard-list"></i> Viewport Patrol Briefing</div>
         <div id="operational-briefing-content">
             <div class="briefing-stat-row">Loading briefing stats...</div>
+        </div>
+    </div>
+
+    <!-- Floating Temporal Time Slider Widget -->
+    <div id="time-slider-widget" class="time-slider-container">
+        <div class="time-slider-header">
+            <span><i class="fa-solid fa-calendar-days"></i> Timeline Filter</span>
+            <button id="btn-play-timeline" class="btn-timeline-play" onclick="toggleTimelinePlayback()" title="Play / Pause Animation">
+                <i class="fa-solid fa-play"></i>
+            </button>
+        </div>
+        <div class="time-slider-body">
+            <input type="range" id="time-range-slider" min="0" max="12" value="0" step="1" oninput="handleTimeSliderInput(this.value)">
+            <div class="time-slider-labels">
+                <span id="time-slider-display-val"><b>Show All Months</b></span>
+            </div>
         </div>
     </div>
 
@@ -150,6 +158,7 @@
                 <ul style="padding-left: 20px; margin: 10px 0;">
                     <li><strong>Analyst Mode:</strong> Density Heatmaps (Crime & Traffic), Query Builder & Spatial Buffers.</li>
                     <li><strong>Officer Mode:</strong> Day/Night Shift Filters & Viewport Patrol Briefing Cards.</li>
+                    <li><strong>Temporal Control:</strong> Filter crimes and collisions by month (Jan – Dec).</li>
                 </ul>
             </div>
             <div class="query-actions">
@@ -193,7 +202,7 @@
     <!-- Leaflet & Plugin Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://unpkg.com/leaflet.pattern/dist/leaflet.pattern.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
     <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
